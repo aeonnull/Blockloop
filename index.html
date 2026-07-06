@@ -202,7 +202,7 @@
   let lbFallback=[{n:'MIO',s:1450},{n:'SATOSHI',s:1120},{n:'ORDINAL',s:880},{n:'BLOCK',s:610},{n:'DEGEN',s:420}];
   function esc(t){return String(t).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
   let player,obstacles,particles,spawnX,bgScroll,shakeT,flashT,coinsArr,coinTimer,lastAction;
-  let coyote,buffer,jumpHeld,ducking,deadCooldown=0,drone=null,droneTimer,landT=0,fireT=0,fireCd=0,hammer=null,hammerTimer,zapT=0,charges=0,swingT=0,swingTarget=null,swingHit=false,demo=false,botHold=0,botShortHop=false,boss=null,bossTimer=24,shieldPick=null,shieldTimer=16,hasShield=false,shieldFlashT=0,gaps=[],zone='street',zoneT=2200,gapX=0,zoneBannerT=0,stars=[],ropeBalls=[],lanterns=[],lanternTimer=2,roofBoss=null,pendingRoofBoss=false,roofVisits=0,level=1,startLevel=1,maxLevel=1,lvlDist=0,lvlBannerT=0,bossDone=false,zoneBlend=0,clearedT=0,plats=[],hearts=[],heartsGot=0,starsThrown=0,platX=0,roofRuns=0,l1Idx=0,blueBlend=0,fallers=[],fallX=1400,heartLvlDone=false,waterDone=false;
+  let coyote,buffer,jumpHeld,ducking,deadCooldown=0,drone=null,droneTimer,landT=0,fireT=0,fireCd=0,hammer=null,hammerTimer,zapT=0,charges=0,swingT=0,swingTarget=null,swingHit=false,demo=false,botHold=0,botShortHop=false,boss=null,bossTimer=24,shieldPick=null,shieldTimer=16,hasShield=false,shieldFlashT=0,gaps=[],zone='street',zoneT=2200,gapX=0,zoneBannerT=0,stars=[],ropeBalls=[],lanterns=[],lanternTimer=2,roofBoss=null,pendingRoofBoss=false,roofVisits=0,level=1,startLevel=1,maxLevel=1,lvlDist=0,lvlBannerT=0,bossDone=false,zoneBlend=0,clearedT=0,plats=[],hearts=[],heartsGot=0,starsThrown=0,platX=0,raisedX=0,roofRuns=0,l1Idx=0,blueBlend=0,fallers=[],fallX=1400,heartLvlDone=false,waterDone=false;
   let bonus=0,blockHeight,blockFill,chain,surge,txArr,txTimer,confirmMsgT,txPops;
 
   function reset(){
@@ -215,7 +215,7 @@
     zone=(level>=7&&level<=9)?'roof':'street'; zoneBlend=(zone==='roof')?1:0; gapX=W+340;
     if(level===7||level===8||level===9)pendingRoofBoss=true;
     speed=LVL_SPD[Math.min(level,11)]; heartLvlDone=false; waterDone=false;
-    plats=[]; hearts=[]; platX=W+600; l1Idx=0; fallers=[]; fallX=1400;
+    plats=[]; hearts=[]; platX=W+600; raisedX=W+900; l1Idx=0; fallers=[]; fallX=1400;
     if(zone==='roof')roofRuns++; fireT=0; fireCd=0; hammer=null; hammerTimer=14; zapT=0; charges=0; swingT=0; swingTarget=null; swingHit=false;
     coinsArr=[]; coinTimer=2.0; coins=0;
     bonus=0; blockHeight=BLOCK_START; blockFill=0.40; chain=[]; surge=null; txArr=[]; txTimer=2.2; confirmMsgT=0; txPops=[];
@@ -412,7 +412,7 @@
   }
   function levelUp(){
     level++; maxLevel=Math.max(maxLevel,level); lvlDist=0; lvlBannerT=2.6;
-    if(level>=7&&level<=9){ if(zone!=='roof'){ zone='roof'; gapX=W+340; platX=W+600; roofRuns++; } }
+    if(level>=7&&level<=9){ if(zone!=='roof'){ zone='roof'; gapX=W+340; platX=W+600; raisedX=W+900; roofRuns++; } }
     else { zone='street'; }
     if(level===7||level===8||level===9){ pendingRoofBoss=true; bossDone=false; }
     if(level===11){ zoneT=2000; }
@@ -519,14 +519,16 @@
       zoneT-=speed*dt;
       if(roofBoss)zoneT=Math.max(zoneT,600);
       if(zoneT<=0){
-        if(zone==='street' && !surge && !boss){ zone='roof'; zoneT=1700+Math.random()*600; gapX=W+340; platX=W+600; roofRuns++; zoneBannerT=2.2; roofVisits++; if(roofVisits%2===0)pendingRoofBoss=true; }
+        if(zone==='street' && !surge && !boss){ zone='roof'; zoneT=1700+Math.random()*600; gapX=W+340; platX=W+600; raisedX=W+900; roofRuns++; zoneBannerT=2.2; roofVisits++; if(roofVisits%2===0)pendingRoofBoss=true; }
         else if(zone==='roof'){ zone='street'; zoneT=2400+Math.random()*900; zoneBannerT=2.2; }
         else zoneT=400;
       }
     }
     if(zone==='roof'){ gapX-=speed*dt;
-      if(!roofBoss&&gapX<W+220){ const gw=Math.min(210,Math.max(80,speed*0.44));
-        gaps.push({x:gapX,w:gw}); gapX+=gw+300+Math.random()*260; } }
+      if(!roofBoss&&gapX<W+220){
+        if(plats.some(p=>p.roof && p.x+p.w>W-140)){ gapX=W+240; }   // hold gaps clear of a raised rooftop strip
+        else { const gw=Math.min(210,Math.max(80,speed*0.44));
+          gaps.push({x:gapX,w:gw}); gapX+=gw+300+Math.random()*260; } } }
     for(const g of gaps)g.x-=speed*dt;
     gaps=gaps.filter(g=>g.x+g.w>-60);
     for(const st of stars){ st.x+=st.vx*dt; st.spin+=dt*22; }
@@ -539,11 +541,23 @@
     lanterns=lanterns.filter(ln=>!ln.hit&&ln.x>-50);
     // ---------- TAK-PLATTFORMAR + HJÄRTAN ----------
     if(zone==='roof' && !roofBoss){ platX-=speed*dt;
-      if(platX<W+240 && !gaps.some(g=>g.x>W-100&&g.x<W+700)){
+      if(platX<W+240 && !gaps.some(g=>g.x>W-100&&g.x<W+700) && !plats.some(p=>p.roof && p.x+p.w>W-160)){
         const bx=W+260;
         plats.push({x:bx,top:GROUND_Y-115,w:126},{x:bx+196,top:GROUND_Y-205,w:112});
         hearts.push({x:bx+240,y:GROUND_Y-286,bob:Math.random()*6,got:false});
         platX=1900+Math.random()*800;
+      } }
+    // ---------- RAISED ROOFTOP STRETCH (recurring elevation change in the running surface) ----------
+    // A taller neighbouring rooftop the player hops UP onto, runs along, then drops back off the far edge to GROUND_Y.
+    // Stops once BIP 110 is actually imminent (its spawn pre-conditions are met) and while it's on screen,
+    // so the boss's fixed-height GROUND_Y beams never fight an elevated player.
+    const bossImminent = pendingRoofBoss && (level===7 ? starsThrown>=5 : level===9 ? heartsGot>=3 : true) && lvlDist>1200;
+    if(zone==='roof' && !roofBoss && !bossImminent){ raisedX-=speed*dt;
+      if(raisedX<W+240 && !drone && !gaps.some(g=>g.x>W-160&&g.x<W+900) && !plats.some(p=>p.x+p.w>W-160)){
+        const h=64+Math.floor(Math.random()*3)*13;          // 64 / 77 / 90 px above GROUND_Y (well within a normal jump)
+        const w=340+Math.random()*130;                      // one continuous 340-470 px raised strip
+        plats.push({x:W+260,top:GROUND_Y-h,w:w,roof:true});
+        raisedX=1500+Math.random()*900;                     // recurring, comfortably spaced
       } }
     for(const p of plats)p.x-=speed*dt;
     plats=plats.filter(p=>p.x+p.w>-60);
@@ -556,7 +570,7 @@
     const fallOK = ((level===3&&lvlDist>1500)||level===4||level===6||level===8||level>=10) && !gaps.some(g=>g.water);
     if(fallOK && !roofBoss && !surge){ fallX-=speed*dt;
       if(fallX<=0){ const fx=player.x+300+Math.random()*240;
-        const clear = !obstacles.some(o=>Math.abs(o.x-fx)<150) && !gaps.some(g=>fx>g.x-60&&fx<g.x+g.w+60);
+        const clear = !obstacles.some(o=>Math.abs(o.x-fx)<150) && !gaps.some(g=>fx>g.x-60&&fx<g.x+g.w+60) && !plats.some(p=>p.roof&&fx>p.x-70&&fx<p.x+p.w+70);
         if(clear) fallers.push({x:fx,y:-60,vy:0,state:'warn',t:0});
         fallX=900+Math.random()*800; } }
     for(const fb of fallers){ fb.x-=speed*dt; fb.t+=dt;
@@ -582,7 +596,7 @@
     if(level>=2 && zone==='street' && !heartLvlDone && lvlDist>LVL_LEN[Math.min(level,10)]*0.55){
       heartLvlDone=true; hearts.push({x:W+80,y:GROUND_Y-232,bob:0,got:false}); }
     // ---------- BIP 110 (takduellen: ducka - hoppa - kasta) ----------
-    if(zone==='roof' && pendingRoofBoss && !roofBoss && (level===7 ? (starsThrown>=5 && lvlDist>1500) : level===9 ? (heartsGot>=3 && lvlDist>1500) : lvlDist>1500) && !gaps.some(g=>g.x>player.x&&g.x<W+320)){
+    if(zone==='roof' && pendingRoofBoss && !roofBoss && (level===7 ? (starsThrown>=5 && lvlDist>1500) : level===9 ? (heartsGot>=3 && lvlDist>1500) : lvlDist>1500) && !gaps.some(g=>g.x>player.x&&g.x<W+320) && !plats.some(p=>p.roof)){
       roofBoss={x:W+180,phase:'in',t:0,bob:0,cycle:0,cycleTarget:(level===7?1:level===8?2:3),ball:(level===8)}; pendingRoofBoss=false; }
     if(roofBoss){
       const rb=roofBoss; rb.t+=dt; rb.bob+=dt;
@@ -658,7 +672,7 @@
     droneTimer-=dt;
     const droneOK = level>=11 ? speed>360 : ((level===2&&lvlDist>2200)||level===4||level===6||((level===7||level===8)&&lvlDist>1200));
     const waterOn=gaps.some(g=>g.water);
-    if(!drone&&!boss&&!roofBoss&&droneOK&&droneTimer<=0&&!surge&&!waterOn)spawnDrone();
+    if(!drone&&!boss&&!roofBoss&&droneOK&&droneTimer<=0&&!surge&&!waterOn&&!plats.some(p=>p.roof))spawnDrone();
     if(!droneActive&&!boss&&zone!=='roof'&&spawnX<W+160&&!surge&&!waterOn)spawnGround();
 
     const ph=curH(),px=player.x,py=player.y-ph,pw=P_W,pad=7;
@@ -1058,6 +1072,16 @@
         ctx.globalAlpha=0.55; ctx.fillStyle='#bfe0ee'; ctx.fillRect(p.x,p.top-2,p.w,2); ctx.globalAlpha=1;  // foam highlight
         continue;
       }
+      if(p.roof){                                      // raised neighbouring rooftop the player runs across
+        const bot=GROUND_Y+46;                          // solid building face down past the ground line
+        ctx.fillStyle='#242834'; ctx.fillRect(p.x,p.top+5,p.w,bot-(p.top+5));         // wall
+        ctx.fillStyle='#313648'; ctx.fillRect(p.x,p.top+5,p.w,12);                    // upper wall highlight
+        ctx.fillStyle='#f7a000'; ctx.fillRect(p.x,p.top,p.w,5);                       // lit parapet cap = standable top
+        ctx.fillStyle='#ffce5a'; ctx.fillRect(p.x,p.top,p.w,2);
+        ctx.fillStyle='#4a5168';                                                      // rooftop windows for depth
+        for(let wx=p.x+16; wx<p.x+p.w-16; wx+=44){ ctx.fillRect(wx,p.top+24,14,20); }
+        continue;
+      }
       ctx.fillStyle='#f7a000'; ctx.fillRect(p.x,p.top,p.w,14);
       ctx.fillStyle='#b06f00'; ctx.fillRect(p.x,p.top+14,p.w,22);
       ctx.fillStyle='#e0a33c'; ctx.globalAlpha=0.8;
@@ -1374,6 +1398,17 @@
       }
     }
 
+    // ---- RAISED ROOFTOP: hop UP onto the elevated strip's leading edge; ride it; run off the far edge (physics drops us) ----
+    if(!needDuck && gnd){
+      let strip=null, sd=1e9;
+      for(const p of plats){ if(!p.roof) continue; if(p.x+p.w<px-6) continue; const d=p.x-front; if(d<sd){ sd=d; strip=p; } }
+      if(strip){
+        const onStrip = player.y<=strip.top+6;                 // already up on it -> just keep running (drop-off is free)
+        // lead the jump so the descent (~speed*0.74) lands the box onto the strip top well past the leading edge
+        if(!onStrip && sd>0 && sd<speed*0.55){ needJump=true; jumpHold=0.42; }
+      }
+    }
+
     // ---- opportunistic coin / tx grab (lowest priority; never when a threat is within a jump) ----
     const clearAhead = ngd>speed*0.95 && ngap>speed*0.95 && airETA>BOT_AIRTIME*1.1 && !gaps.some(g=>g.water);
     if(!needJump && !needDuck && gnd && clearAhead){
@@ -1458,6 +1493,7 @@
     window.__bh={
       snap:()=>({level,state,lvlDist,dist,speed,zone,bossDone,coins,score,demo,startLevel,
         heartsGot,starsThrown,charges,hasShield,py:player&&player.y,
+        elev:player?Math.round(GROUND_Y-player.y):0,roofStrips:plats.filter(p=>p.roof).length,
         bossCycle:roofBoss?roofBoss.cycle:null,bossTarget:roofBoss?(roofBoss.cycleTarget||3):null,
         balls:ropeBalls.length,ballX:ropeBalls.length?Math.round(ropeBalls[0].x-player.x):null,ducking,
         phase:(roofBoss&&('roof:'+roofBoss.phase))||(boss&&('boss:'+boss.phase))||(drone&&('drone:'+drone.phase))||null}),
@@ -1469,7 +1505,7 @@
         p:{x:Math.round(player.x),y:Math.round(player.y),onGround:player.onGround,ducking,vy:Math.round(player.vy)},
         obs:obstacles.filter(o=>o.x>player.x-60&&o.x<player.x+260).map(o=>({t:o.type,x:Math.round(o.x-player.x),w:Math.round(o.w||0),h:Math.round(o.h||0),bottom:o.bottom?Math.round(o.bottom):undefined})),
         gaps:gaps.filter(g=>g.x+g.w>player.x-60&&g.x<player.x+520).map(g=>({x:Math.round(g.x-player.x),w:Math.round(g.w),water:!!g.water})),
-        plats:plats.filter(p=>p.x+p.w>player.x-60&&p.x<player.x+520).map(p=>({x:Math.round(p.x-player.x),w:Math.round(p.w),top:Math.round(p.top),stone:!!p.stone})),
+        plats:plats.filter(p=>p.x+p.w>player.x-60&&p.x<player.x+520).map(p=>({x:Math.round(p.x-player.x),w:Math.round(p.w),top:Math.round(p.top),stone:!!p.stone,roof:!!p.roof})),
         fallers:fallers.filter(f=>f.x>player.x-60&&f.x<player.x+320).map(f=>({x:Math.round(f.x-player.x),y:Math.round(f.y),st:f.state})),
         drone:drone?{phase:drone.phase,t:+drone.t.toFixed(2)}:null })
     };
