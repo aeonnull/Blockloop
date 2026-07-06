@@ -202,7 +202,7 @@
   let lbFallback=[{n:'MIO',s:1450},{n:'SATOSHI',s:1120},{n:'ORDINAL',s:880},{n:'BLOCK',s:610},{n:'DEGEN',s:420}];
   function esc(t){return String(t).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
   let player,obstacles,particles,spawnX,bgScroll,shakeT,flashT,coinsArr,coinTimer,lastAction;
-  let coyote,buffer,jumpHeld,ducking,deadCooldown=0,drone=null,droneTimer,landT=0,fireT=0,fireCd=0,hammer=null,hammerTimer,zapT=0,charges=0,swingT=0,swingTarget=null,swingHit=false,demo=false,botHold=0,botShortHop=false,boss=null,bossTimer=24,shieldPick=null,shieldTimer=16,hasShield=false,shieldFlashT=0,gaps=[],zone='street',zoneT=2200,gapX=0,zoneBannerT=0,stars=[],lanterns=[],lanternTimer=2,roofBoss=null,pendingRoofBoss=false,roofVisits=0,level=1,startLevel=1,maxLevel=1,lvlDist=0,lvlBannerT=0,bossDone=false,zoneBlend=0,clearedT=0,plats=[],hearts=[],heartsGot=0,platX=0,roofRuns=0,l1Idx=0,blueBlend=0,fallers=[],fallX=1400,heartLvlDone=false;
+  let coyote,buffer,jumpHeld,ducking,deadCooldown=0,drone=null,droneTimer,landT=0,fireT=0,fireCd=0,hammer=null,hammerTimer,zapT=0,charges=0,swingT=0,swingTarget=null,swingHit=false,demo=false,botHold=0,botShortHop=false,boss=null,bossTimer=24,shieldPick=null,shieldTimer=16,hasShield=false,shieldFlashT=0,gaps=[],zone='street',zoneT=2200,gapX=0,zoneBannerT=0,stars=[],lanterns=[],lanternTimer=2,roofBoss=null,pendingRoofBoss=false,roofVisits=0,level=1,startLevel=1,maxLevel=1,lvlDist=0,lvlBannerT=0,bossDone=false,zoneBlend=0,clearedT=0,plats=[],hearts=[],heartsGot=0,starsThrown=0,platX=0,roofRuns=0,l1Idx=0,blueBlend=0,fallers=[],fallX=1400,heartLvlDone=false;
   let bonus=0,blockHeight,blockFill,chain,surge,txArr,txTimer,confirmMsgT,txPops;
 
   function reset(){
@@ -211,9 +211,9 @@
     obstacles=[]; particles=[]; spawnX=W+340; bgScroll=0; lastAction='jump';
     shakeT=0; flashT=0; coyote=0; buffer=0; jumpHeld=false; ducking=false;
     drone=null; droneTimer=9; boss=null; bossTimer=24; shieldPick=null; shieldTimer=16; hasShield=false; shieldFlashT=0; gaps=[]; zone='street'; zoneT=2200; zoneBannerT=0; stars=[]; lanterns=[]; lanternTimer=2; roofBoss=null; pendingRoofBoss=false; roofVisits=0; landT=0;
-    level=startLevel; maxLevel=Math.max(maxLevel,level); lvlDist=0; bossDone=false; lvlBannerT=2.6;
+    level=startLevel; maxLevel=Math.max(maxLevel,level); lvlDist=0; bossDone=false; lvlBannerT=2.6; starsThrown=0;
     zone=(level>=7&&level<=9)?'roof':'street'; zoneBlend=(zone==='roof')?1:0; gapX=W+340;
-    if(level===9)pendingRoofBoss=true;
+    if(level===7||level===9)pendingRoofBoss=true;
     speed=LVL_SPD[Math.min(level,11)]; heartLvlDone=false;
     plats=[]; hearts=[]; platX=W+600; l1Idx=0; fallers=[]; fallX=1400;
     if(zone==='roof')roofRuns++; fireT=0; fireCd=0; hammer=null; hammerTimer=14; zapT=0; charges=0; swingT=0; swingTarget=null; swingHit=false;
@@ -343,7 +343,7 @@
     if(zone==='roof'){
       if(fireCd>0) return;
       fireT=0.3; fireCd=0.45;
-      stars.push({x:player.x+P_W*0.8,y:player.y-curH()*0.62,vx:speed+640,spin:0});
+      stars.push({x:player.x+P_W*0.8,y:player.y-curH()*0.62,vx:speed+640,spin:0}); starsThrown++;
       return;
     }
     if(charges>0 && player.onGround && swingT<=0){
@@ -414,7 +414,7 @@
     level++; maxLevel=Math.max(maxLevel,level); lvlDist=0; lvlBannerT=2.6;
     if(level>=7&&level<=9){ if(zone!=='roof'){ zone='roof'; gapX=W+340; platX=W+600; roofRuns++; } }
     else { zone='street'; }
-    if(level===9){ pendingRoofBoss=true; bossDone=false; }
+    if(level===7||level===9){ pendingRoofBoss=true; bossDone=false; }
     if(level===11){ zoneT=2000; }
     heartLvlDone=false;
     if(typeof refreshLvlSel==='function') refreshLvlSel();
@@ -512,6 +512,7 @@
     blueBlend+=(((zone==='street'&&level>=5&&level<=6)?1:0)-blueBlend)*Math.min(1,dt*1.2);
     if(level<11){
       if(level===9){ if(bossDone){ bonus+=150; levelUp(); } }
+      else if(level===7 && bossDone){ bonus+=150; levelUp(); }
       else if(lvlDist>LVL_LEN[level] && !surge && !boss && !roofBoss){ bonus+=150; levelUp(); }
     } else {
       zoneT-=speed*dt;
@@ -571,8 +572,8 @@
     if(level>=2 && zone==='street' && !heartLvlDone && lvlDist>LVL_LEN[Math.min(level,10)]*0.55){
       heartLvlDone=true; hearts.push({x:W+80,y:GROUND_Y-232,bob:0,got:false}); }
     // ---------- BIP 110 (takduellen: ducka - hoppa - kasta) ----------
-    if(zone==='roof' && pendingRoofBoss && !roofBoss && (level!==9||lvlDist>1500) && !gaps.some(g=>g.x>player.x&&g.x<W+320)){
-      roofBoss={x:W+180,phase:'in',t:0,bob:0,cycle:0}; pendingRoofBoss=false; }
+    if(zone==='roof' && pendingRoofBoss && !roofBoss && (level===7 ? (starsThrown>=5 && lvlDist>1500) : (level!==9||lvlDist>1500)) && !gaps.some(g=>g.x>player.x&&g.x<W+320)){
+      roofBoss={x:W+180,phase:'in',t:0,bob:0,cycle:0,cycleTarget:(level===7?1:3)}; pendingRoofBoss=false; }
     if(roofBoss){
       const rb=roofBoss; rb.t+=dt; rb.bob+=dt;
       const bx=W-150, eyeY=GROUND_Y-BIP_S+BIP_EYE, lowY=GROUND_Y-BIP_LOW;
@@ -588,8 +589,8 @@
       else if(rb.phase==='fireL'){ const pT=player.y-curH();
         if(rb.t<0.3 && lowY>pT-10 && lowY<player.y+10){ die('ash'); return; }
         if(rb.t>0.35){rb.phase='open';rb.t=0;} }
-      else if(rb.phase==='open'){ if(rb.t>1.6){ rb.cycle++; if(rb.cycle>=3){rb.phase='out';rb.t=0;} else {rb.phase='chargeH';rb.t=0;} } }
-      else if(rb.phase==='out'){ rb.x+=460*dt; if(rb.x>W+200){ roofBoss=null; if(level===9)bossDone=true; } }
+      else if(rb.phase==='open'){ if(rb.t>1.6){ rb.cycle++; if(rb.cycle>=(rb.cycleTarget||3)){rb.phase='out';rb.t=0;} else {rb.phase='chargeH';rb.t=0;} } }
+      else if(rb.phase==='out'){ rb.x+=460*dt; if(rb.x>W+200){ roofBoss=null; if(level===7||level===9)bossDone=true; } }
       // stjärna mot BIP: träff i 'open' fäller honom, annars studsar den av
       if(roofBoss)for(const st of stars){
         if(st.x>rb.x-6 && st.x<rb.x+BIP_S-20 && Math.abs(st.y-(GROUND_Y-BIP_S*0.55))<75){
@@ -1369,7 +1370,8 @@
   if(location.hash.indexOf('dev')>=0){
     window.__bh={
       snap:()=>({level,state,lvlDist,dist,speed,zone,bossDone,coins,score,demo,startLevel,
-        heartsGot,charges,hasShield,py:player&&player.y,
+        heartsGot,starsThrown,charges,hasShield,py:player&&player.y,
+        bossCycle:roofBoss?roofBoss.cycle:null,bossTarget:roofBoss?(roofBoss.cycleTarget||3):null,
         phase:(roofBoss&&('roof:'+roofBoss.phase))||(boss&&('boss:'+boss.phase))||(drone&&('drone:'+drone.phase))||null}),
       play:(n)=>{ demo=true; startLevel=Math.max(1,Math.min(11,n|0)); maxLevel=Math.max(maxLevel,startLevel); start(); },
       setDemo:(b)=>{ demo=!!b; },
