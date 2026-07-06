@@ -156,6 +156,32 @@
   const CHARS = [{name:'CLASSIC',def:true,aspect:0.50,img:null}];
   CHAR_ALT.forEach(c=>{ const im=new Image(); im.src=c.src; CHARS.push({name:c.name,aspect:c.aspect,img:im}); });
   let selChar=0;
+  // ---------- CHARACTER TRAITS (gameplay identity per skin) ----------
+  // CLASSIC (and any unrecognised skin) = all defaults => a complete no-op.
+  // Each non-CLASSIC skin gets ONE clear bonus paired with ONE clear downside.
+  //  starMargin  : +px on each side of the BIP-110 star hit window (MAGENTA bonus / BTC-CAMO penalty, negative)
+  //  starYMult   : x on the BIP-110 star vertical hit tolerance (75px base)
+  //  heartRadius : x on heart pickup half-width/height (MAGENTA penalty)
+  //  shieldFree  : grant hasShield free at the start of every level (CHARCOAL bonus)
+  //  bonusMult   : x on level-clear +150 bonus (CHARCOAL penalty)
+  //  dodgeChance : 0..1 chance die() is dodged (SWOOSH bonus)
+  //  exhaustSec  : seconds after a dodge during which coins/hearts can't be collected (SWOOSH penalty)
+  //  magnetRadius: px radius that pulls coins/hearts toward the player (BTC bonus)
+  //  rangeMult   : x on hammer-swing acquisition + rope-cut reach (BTC/CAMO penalty)
+  //  scoreMult   : x on final score (TETRIS bonus)
+  //  hitPad      : effective obstacle-collision inset in px (base 7; lower = bigger hitbox TETRIS, higher = smaller CAMO)
+  //  airLeniency : px the player's head may poke into an 'air' bar and still clear it standing (CAMO bonus)
+  //  coinValMult : x on each coin's score value (CAMO penalty)
+  const CHAR_TRAIT = {
+    MAGENTA:  { starMargin:26,  starYMult:1.70, heartRadius:0.60 },
+    CHARCOAL: { shieldFree:true, bonusMult:0.55 },
+    SWOOSH:   { dodgeChance:0.30, exhaustSec:3.5 },
+    BTC:      { magnetRadius:170, rangeMult:0.60, starMargin:-18, starYMult:0.55 },
+    TETRIS:   { scoreMult:2.0, hitPad:-1 },
+    CAMO:     { hitPad:14, airLeniency:36, coinValMult:0.55, rangeMult:0.78, starMargin:-10, starYMult:0.72 }
+  };
+  function trait(){ return (CHARS[selChar] && CHAR_TRAIT[CHARS[selChar].name]) || {}; }
+  function bmult(){ return trait().bonusMult!=null ? trait().bonusMult : 1; }
   // BIP-110 boss = a blackened Blockhead silhouette (faces left, animated in code).
   const bossBhImg=new Image(); bossBhImg.src=/*__BOSSBH__*/'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAG4AAADcCAYAAACRWZSFAAAFMUlEQVR4AeybPW4UQRBG2xsjcQ0fgggfgYAEckvEnIIYyTkRESewI25AsrdZ2lqkAWztuLvrp7+Zh6ZWy+501TfvuQILcSg9f34cT8W6PpRToRYGK176xK005Wt/AojzZ+wyAXEuWP2bIs6fscsExLlg9W+KOH/GLhMQ54LVv+k84t4dS7lUryqMPdVt/b32QiWLqzK4ugggrgtb/iHE5TvoSoC4Lmz5hxCX76ArAeK6sOUfQly+g64EiOvCln/oUB7qP4q21usaPLrqSK6FwL43buEg9w5xcsrOgRF35iD3ijg5ZefAiDtzkHtFnJyyc2DEnTnIvW5K3P2nY7lU5a76Wat6y+h1KcPjdxY5NiVuFLjSecQl2hoZjbgReolnEZcIf2Q04kboJZ5FXCL8kdGIG6GXeBZxifBHRu9K3P2v+gv6So3AfOlZixy7EvdSsAr3IU7B0jMZDcQ905WP3Akgzh2xzwDE+XB174o4d8Q+AxDnw9W966bE3Xy9LqNlQXw0w+P5tRybErf2sFv6HnGiNhGHuCQCOx3LxomKRxziRAmIxmbjECdKQDQ2G4c4UQKisdk4xIkSaI393//2aT1udT8bZ0UyuA/igoFbjUOcFcngPohrBX5bD/xd9a8ZF+IyqBvMRJwBxIwWiMugbjATcQYQM1ogLoO6wcw/4gw60SKUAOJCcdsNQ5wdy9BOiAvFbTcMcXYsQzshLhS33TDE2bEM7YS4UNx2wxBnxzK00xziQh95G8MQJ+rxUN5eX43W8fO34l0/79+XrVS5K1ejxcbJbpxo8L3HZuNEfwIQhzhRAqKx2TjEiRIopSgmZ+MUrdXMh/JwPI3W9ZePxbve3HwvW6lyW06jxcbVn17FC3GK1mpmxFUIihfiFK3VzIirEBQvxClaq5kRVyEkX13jEdeFLf8Q4vIddCVAXBe2/EOIy3fQlQBxXdjyDyEu30FXAsR1Ycs/hLh8B10JENeFLf+Qnbj8Z9lVAsSJ6kYc4kQJiMZm4xAnSkA0NhuHOFECorHZOMTlEtjbdDZO1DjiECdKQDQ2G4c4UQKisdk4xIkSEI3NxiFOlIBN7PAubFw4cpuBiLPhGN4FceHIbQYizoZjeBfEhSO3GYg4G47hXRAXjtxmIOJsOIZ3QVw4cpuB/4qz6UmXAAKIC4DsMQJxHlQDeiIuALLHCMR5UA3oibgAyB4jEOdBNaAn4gIge4xAnAfVgJ5TiQt43s2MQJyoSsQhTpSAaGw2DnGiBERjs3GIEyUgGpuNQ5wogSW21Ds2TkrXEhZxCwupd4iT0rWERdzCQuod4qR0LWERt7CQeoc4KV1LWMQtLKTeIW4aXW1BENfGa5q7ETeNirYgiGvjNc3diJtGRVsQxLXxmuZuxE2joi0I4tp4TXM34qZR0RYEcW28prnbXNw0T7bxIIgTFYw4xIkSEI3NxiFOlIBobDYOcaIERGOzcYibgsBuQrBxoqoRhzhRAqKx2TjEiRIQjc3GIU6UgGhsNg5xogRMY8c1Y+PiWJtOQpwpzrhmiItjbToJcaY445ohLo616STEmeKMa4a4ONamkxBnijOuGeLiWJtOelac6QSauRBAnAtW/6aI82fsMgFxLlj9myLOn7HLBMS5YPVvijh/xi4TEOeC1b8p4vwZu0yYUZzLg26tKeJEjSIOcaIERGOzcYgTJSAam41DnCgB0dhsHOJECTyJrfEBG6fh6UlKxD1BovEB4tY83ZWrcqnWzjt9jzgnsN5tEedN2Kk/4pzAerf9DQAA///DlDb3AAAABklEQVQDAE6xh21O9MMuAAAAAElFTkSuQmCC';
   const BOSSBH_AR=/*__BOSSBH_AR__*/0.5;
@@ -203,6 +229,7 @@
   function esc(t){return String(t).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
   let player,obstacles,particles,spawnX,bgScroll,shakeT,flashT,coinsArr,coinTimer,lastAction;
   let coyote,buffer,jumpHeld,ducking,deadCooldown=0,drone=null,droneTimer,landT=0,fireT=0,fireCd=0,hammer=null,hammerTimer,zapT=0,charges=0,swingT=0,swingTarget=null,swingHit=false,demo=false,botHold=0,botShortHop=false,boss=null,bossTimer=24,shieldPick=null,shieldTimer=16,hasShield=false,shieldFlashT=0,gaps=[],zone='street',zoneT=2200,gapX=0,zoneBannerT=0,stars=[],ropeBalls=[],lanterns=[],lanternTimer=2,roofBoss=null,pendingRoofBoss=false,roofVisits=0,level=1,startLevel=1,maxLevel=1,lvlDist=0,lvlBannerT=0,bossDone=false,zoneBlend=0,clearedT=0,plats=[],hearts=[],heartsGot=0,starsThrown=0,platX=0,raisedX=0,roofRuns=0,l1Idx=0,blueBlend=0,fallers=[],fallX=1400,heartLvlDone=false,waterDone=false;
+  let igrace=0,exhaustedT=0;
   let bonus=0,blockHeight,blockFill,chain,surge,txArr,txTimer,confirmMsgT,txPops;
 
   function reset(){
@@ -219,6 +246,8 @@
     if(zone==='roof')roofRuns++; fireT=0; fireCd=0; hammer=null; hammerTimer=14; zapT=0; charges=0; swingT=0; swingTarget=null; swingHit=false;
     coinsArr=[]; coinTimer=2.0; coins=0;
     bonus=0; blockHeight=BLOCK_START; blockFill=0.40; chain=[]; surge=null; txArr=[]; txTimer=2.2; confirmMsgT=0; txPops=[];
+    igrace=0; exhaustedT=0;
+    if(trait().shieldFree) hasShield=true;   // CHARCOAL starts every level shielded
   }
   function curH(){ return ducking && player.onGround ? H_DUCK : H_STAND; }
 
@@ -346,14 +375,15 @@
       stars.push({x:player.x+P_W*0.8,y:player.y-curH()*0.62,vx:speed+640,spin:0}); starsThrown++;
       return;
     }
+    const _rm=trait().rangeMult||1;   // BTC/CAMO have a shorter attack reach
     if(charges>0 && player.onGround && swingT<=0){
       let m=null,md=1e9;
-      for(const o of obstacles){ if(o.type==='mtn'&&o.hp>0){ const d=o.x-(player.x+P_W); if(d>-80 && d<360 && d<md){md=d;m=o;} } }
+      for(const o of obstacles){ if(o.type==='mtn'&&o.hp>0){ const d=o.x-(player.x+P_W); if(d>-80 && d<360*_rm && d<md){md=d;m=o;} } }
       if(m){ swingT=SWING_T; swingTarget=m; swingHit=false; return; }
     }
     if(fireCd>0||!player.onGround) return;
     fireT=0.34; fireCd=0.55;
-    const reach=(H_STAND/FIRE_CHAR_HF)*FIRE_IMG_AR*FIRE_REACHF+40;
+    const reach=((H_STAND/FIRE_CHAR_HF)*FIRE_IMG_AR*FIRE_REACHF+40)*_rm;
     const beamY=player.y-H_STAND*0.60;
     let best=null,bd=1e9;
     for(const o of obstacles){ if(o.type==='rope'&&!o.cut){ const d=o.x-(player.x+P_W); if(d>=-12&&d<=reach&&d<bd){bd=d;best=o;} } }
@@ -403,7 +433,7 @@
     if(demo){ ctrls.classList.add('hidden'); } else { ctrls.classList.remove('hidden'); } }
 
   function enterCleared(){
-    state='cleared'; clearedT=0; bonus+=150;
+    state='cleared'; clearedT=0; bonus+=150*bmult();
     obstacles=[]; gaps=[]; drone=null; boss=null; roofBoss=null; surge=null; stars=[]; ropeBalls=[]; lanterns=[]; plats=[]; hearts=[]; fallers=[];
     player.y=GROUND_Y; player.vy=0; player.onGround=true; ducking=false;
   }
@@ -417,9 +447,30 @@
     if(level===7||level===8||level===9){ pendingRoofBoss=true; bossDone=false; }
     if(level===11){ zoneT=2000; }
     heartLvlDone=false; waterDone=false;
+    igrace=0; exhaustedT=0;
+    if(trait().shieldFree) hasShield=true;   // CHARCOAL is re-shielded on each new level
     if(typeof refreshLvlSel==='function') refreshLvlSel();
   }
   function die(cause){
+    if(state!=='run') return;                 // already dead / not in play
+    if(igrace>0) return;                       // brief invulnerability after a save
+    const pit = cause==='pit';                 // falling into the void can't be shielded/dodged
+    if(!pit){
+      const _dT=trait();
+      // CHARCOAL / shield pickup: absorb one hit for free, keep running
+      if(hasShield){ hasShield=false; shieldFlashT=0.5; igrace=0.9;
+        shakeT=Math.max(shakeT,0.24); flashT=Math.max(flashT,0.10);
+        const bx=player.x+P_W+16, by=player.y-curH()*0.6;
+        for(let i=0;i<18;i++)particles.push({x:bx,y:by,vx:Math.random()*300+60,vy:(Math.random()-0.5)*360,life:0.35+Math.random()*0.3,c:Math.random()<0.5?'#7de8ff':'#ffffff',s:3+Math.random()*4});
+        return; }
+      // SWOOSH: random chance to phase through the hit, then a few seconds "exhausted"
+      if((_dT.dodgeChance||0)>0 && Math.random()<_dT.dodgeChance){
+        igrace=0.9; exhaustedT=_dT.exhaustSec||3.5; shieldFlashT=0.3;
+        shakeT=Math.max(shakeT,0.14);
+        const cx=player.x+P_W/2, cy=player.y-curH()*0.55;
+        for(let i=0;i<22;i++)particles.push({x:cx,y:cy,vx:(Math.random()-0.5)*420,vy:(Math.random()-0.7)*360,life:0.4+Math.random()*0.35,c:Math.random()<0.5?'#b6f36a':'#ffffff',s:3+Math.random()*4});
+        return; }
+    }
     const ash=cause==='ash';
     state='dead'; deadCooldown=demo?0.8:0.5; shakeT=0.4; flashT=ash?0.05:0.14;
     if(!demo){ startLevel=Math.max(startLevel,Math.min(level,11)); if(typeof refreshLvlSel==='function') refreshLvlSel(); }
@@ -505,16 +556,17 @@
     else if(level<11){ speed=Math.min(SPD_MAX, LVL_SPD[level] + lvlDist*0.0015); }
     else { speed=Math.min(SPD_MAX, speed + dt*SPD_RAMP*(1+dist/8000)); }
     if(zone==='roof'){ const cap=210+Math.max(0,roofRuns-1)*45; speed=Math.min(speed,cap); }
-    dist+=speed*dt; score=Math.floor(dist/10)+coins*COIN_VAL+bonus;
+    dist+=speed*dt; { const _sT=trait(), _sm=_sT.scoreMult||1, _cvm=_sT.coinValMult||1;
+      score=Math.round((Math.floor(dist/10)+coins*COIN_VAL*_cvm+bonus)*_sm); }
     // ---------- KVARTER ----------
     lvlDist+=speed*dt;
     zoneBlend+=(((zone==='roof')?1:0)-zoneBlend)*Math.min(1,dt*1.6);
     blueBlend+=(((zone==='street'&&level>=5&&level<=6)?1:0)-blueBlend)*Math.min(1,dt*1.2);
     if(level<11){
-      if(level===9){ if(bossDone){ bonus+=150; levelUp(); }
-        else if(heartsGot<3 && !roofBoss && lvlDist>16000){ bonus+=150; levelUp(); } }
-      else if(level===7 && bossDone){ bonus+=150; levelUp(); }
-      else if(lvlDist>LVL_LEN[level] && !surge && !boss && !roofBoss){ bonus+=150; levelUp(); }
+      if(level===9){ if(bossDone){ bonus+=150*bmult(); levelUp(); }
+        else if(heartsGot<3 && !roofBoss && lvlDist>16000){ bonus+=150*bmult(); levelUp(); } }
+      else if(level===7 && bossDone){ bonus+=150*bmult(); levelUp(); }
+      else if(lvlDist>LVL_LEN[level] && !surge && !boss && !roofBoss){ bonus+=150*bmult(); levelUp(); }
     } else {
       zoneT-=speed*dt;
       if(roofBoss)zoneT=Math.max(zoneT,600);
@@ -561,8 +613,11 @@
       } }
     for(const p of plats)p.x-=speed*dt;
     plats=plats.filter(p=>p.x+p.w>-60);
+    const _hT=trait(), _hMag=_hT.magnetRadius||0, _hRad=_hT.heartRadius||1, _exOn=exhaustedT>0;
     for(const ht of hearts){ ht.x-=speed*dt; ht.bob+=dt;
-      if(!ht.got && Math.abs(ht.x-(player.x+P_W/2))<40 && Math.abs(ht.y-(player.y-curH()*0.5))<58){
+      if(_hMag>0 && !ht.got){ const dx=(player.x+P_W/2)-ht.x, dy=(player.y-curH()*0.5)-ht.y, d=Math.hypot(dx,dy);
+        if(d<_hMag && d>2){ const pull=Math.min(1,(_hMag-d)/_hMag)*420*dt; ht.x+=dx/d*pull; ht.y+=dy/d*pull; } }
+      if(!ht.got && !_exOn && Math.abs(ht.x-(player.x+P_W/2))<40*_hRad && Math.abs(ht.y-(player.y-curH()*0.5))<58*_hRad){
         ht.got=true; heartsGot++;
         for(let i=0;i<14;i++)particles.push({x:ht.x,y:ht.y,vx:(Math.random()-0.5)*300,vy:(Math.random()-0.8)*300,life:0.4+Math.random()*0.3,c:Math.random()<0.5?'#e03a3a':'#f0889a',s:3+Math.random()*3}); } }
     hearts=hearts.filter(ht=>!ht.got&&ht.x>-40);
@@ -622,14 +677,16 @@
       else if(rb.phase==='open'){ if(rb.t>1.6){ rb.cycle++; if(rb.cycle>=(rb.cycleTarget||3)){rb.phase='out';rb.t=0;} else {rb.phase=rb.ball?'chargeBall':'chargeH';rb.t=0;} } }
       else if(rb.phase==='out'){ rb.x+=460*dt; if(rb.x>W+200){ roofBoss=null; if(level===7||level===9)bossDone=true; } }
       // stjärna mot BIP: träff i 'open' fäller honom, annars studsar den av
-      if(roofBoss)for(const st of stars){
-        if(st.x>rb.x-6 && st.x<rb.x+BIP_S-20 && Math.abs(st.y-(GROUND_Y-BIP_S*0.55))<75){
+      // MAGENTA widens/lengthens the to-hit window (more range); BTC/CAMO narrow it (shorter range).
+      if(roofBoss){ const _bT=trait(), _xe=_bT.starMargin||0, _yt=75*(_bT.starYMult||1);
+      for(const st of stars){
+        if(st.x>rb.x-6-_xe && st.x<rb.x+BIP_S-20+_xe && Math.abs(st.y-(GROUND_Y-BIP_S*0.55))<_yt){
           st.x=W+999;
           if(rb.phase==='open'){ bonus+=150;
             for(let i=0;i<30;i++)particles.push({x:rb.x+BIP_S/2,y:GROUND_Y-BIP_S/2,vx:(Math.random()-0.5)*560,vy:(Math.random()-0.9)*560,life:0.5+Math.random()*0.4,c:Math.random()<0.5?'#7de8ff':ORANGE,s:4+Math.random()*4});
             roofBoss=null; bossDone=true; }
           else for(let i=0;i<6;i++)particles.push({x:st.x-8,y:st.y,vx:-Math.random()*220,vy:(Math.random()-0.5)*220,life:0.22,c:'#9aa5ad',s:3});
-          break; } }
+          break; } } }
     }
     // ---------- ROPE-BALLS (BIP 110's spiked ball-on-a-chain — DUCK under them) ----------
     if(ropeBalls.length){ const pT2=player.y-curH();
@@ -638,7 +695,7 @@
       ropeBalls=ropeBalls.filter(r=>r.x>-80); }
     if(zoneBannerT>0)zoneBannerT-=dt;
     if(lvlBannerT>0)lvlBannerT-=dt;
-    if(player.y>H+60){die();return;}
+    if(player.y>H+60){die('pit');return;}
     updateMempool(dt);
     document.getElementById('scoreVal').textContent=score;
     document.getElementById('coinVal').textContent='\u20BF '+coins;
@@ -675,13 +732,14 @@
     if(!drone&&!boss&&!roofBoss&&droneOK&&droneTimer<=0&&!surge&&!waterOn&&!plats.some(p=>p.roof))spawnDrone();
     if(!droneActive&&!boss&&zone!=='roof'&&spawnX<W+160&&!surge&&!waterOn)spawnGround();
 
-    const ph=curH(),px=player.x,py=player.y-ph,pw=P_W,pad=7;
+    const _oT=trait(), pad=(_oT.hitPad!=null?_oT.hitPad:7), _airLen=_oT.airLeniency||0;
+    const ph=curH(),px=player.x,py=player.y-ph,pw=P_W;
     for(const o of obstacles){
       o.x-=speed*dt;
       if(o.type==='ground'){
         if(px+pad<o.x+o.w&&px+pw-pad>o.x&&py+pad<o.y&&py+ph>o.y-o.h){die();return;}
       } else if(o.type==='air'){
-        if(px+pad<o.x+o.w&&px+pw-pad>o.x&&py<o.bottom){die();return;}
+        if(px+pad<o.x+o.w&&px+pw-pad>o.x&&py+_airLen<o.bottom){die();return;}
       } else if(o.type==='rope'){
         if(o.cut){ o.fallV+=2000*dt; o.fallY+=o.fallV*dt; }
         else if(px+pad<o.x+o.w&&px+pw-pad>o.x){die();return;}
@@ -728,6 +786,8 @@
     }
     // ---------- SKÖLDEN ----------
     shieldFlashT=Math.max(0,shieldFlashT-dt);
+    igrace=Math.max(0,igrace-dt);
+    exhaustedT=Math.max(0,exhaustedT-dt);   // SWOOSH: no coin/heart pickup while >0
     if(shieldPick){ shieldPick.x-=speed*dt; shieldPick.bob+=dt;
       if(Math.abs(shieldPick.x-(player.x+P_W/2))<46 && Math.abs(shieldPick.y-(player.y-curH()/2))<curH()/2+28){
         hasShield=true; shieldPick=null; shieldTimer=30+Math.random()*14; }
@@ -761,8 +821,11 @@
     }
     coinTimer-=dt;
     if(coinTimer<=0){ coinsArr.push({x:W+40,y:GROUND_Y-(80+Math.random()*210),bob:Math.random()*6,got:false}); coinTimer=1.5+Math.random()*2.3; }
+    const _cT=trait(), _cMag=_cT.magnetRadius||0, _cEx=exhaustedT>0;
     for(const cn of coinsArr){ cn.x-=speed*dt; cn.bob+=dt; if(cn.rune)cn.life-=dt;
-      if(!cn.got){ const ph2=curH(), gx=cn.rune?34:30, gy=cn.rune?34:26, cy=cn.y+Math.sin(cn.bob*4)*6;
+      if(_cMag>0 && !cn.got){ const dx=(player.x+P_W/2)-cn.x, dy=(player.y-curH()*0.5)-cn.y, d=Math.hypot(dx,dy);
+        if(d<_cMag && d>2){ const pull=Math.min(1,(_cMag-d)/_cMag)*420*dt; cn.x+=dx/d*pull; cn.y+=dy/d*pull; } }
+      if(!cn.got && !_cEx){ const ph2=curH(), gx=cn.rune?34:30, gy=cn.rune?34:26, cy=cn.y+Math.sin(cn.bob*4)*6;
         if(player.x<cn.x+gx && player.x+P_W>cn.x-gx && player.y-ph2<cy+gy && player.y>cy-gy){
           cn.got=true;
           if(cn.rune){ coins+=RUNE_BTC; coinSfx(); flashT=Math.max(flashT,0.10); shakeT=Math.max(shakeT,0.16);
@@ -1333,7 +1396,9 @@
   function render(){
     ctx.save();
     if(shakeT>0){const m=shakeT*46;ctx.translate((Math.random()-0.5)*m,(Math.random()-0.5)*m);}
-    drawBackground();drawObstacles();drawDrone();drawDuel();drawHammer();drawCoins();drawTx();drawPlayer();drawSwing();drawParticles();
+    drawBackground();drawObstacles();drawDrone();drawDuel();drawHammer();drawCoins();drawTx();
+    { let _ga=1; if(exhaustedT>0||igrace>0){ _ga=(Math.floor((exhaustedT+igrace)*12)%2===0)?0.35:0.8; ctx.globalAlpha=_ga; } drawPlayer(); if(_ga<1)ctx.globalAlpha=1; }
+    drawSwing();drawParticles();
     ctx.restore();
     if(flashT>0){ctx.globalAlpha=flashT*4;ctx.fillStyle=ORANGE;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;}
     if(state!=='start') drawMempoolHUD();
@@ -1515,12 +1580,33 @@
     window.__bh={
       snap:()=>({level,state,lvlDist,dist,speed,zone,bossDone,coins,score,demo,startLevel,
         heartsGot,starsThrown,charges,hasShield,py:player&&player.y,
+        charName:CHARS[selChar]&&CHARS[selChar].name,selChar,
+        exhaustedT:+exhaustedT.toFixed(2),igrace:+igrace.toFixed(2),
+        hearts:hearts.length,heartX:hearts.length?Math.round(hearts[0].x-(player.x+P_W/2)):null,
+        coinsOnField:coinsArr.length,
         elev:player?Math.round(GROUND_Y-player.y):0,roofStrips:plats.filter(p=>p.roof).length,
         bossCycle:roofBoss?roofBoss.cycle:null,bossTarget:roofBoss?(roofBoss.cycleTarget||3):null,
         balls:ropeBalls.length,ballX:ropeBalls.length?Math.round(ropeBalls[0].x-player.x):null,ducking,
         phase:(roofBoss&&('roof:'+roofBoss.phase))||(boss&&('boss:'+boss.phase))||(drone&&('drone:'+drone.phase))||null}),
       play:(n)=>{ demo=true; startLevel=Math.max(1,Math.min(11,n|0)); maxLevel=Math.max(maxLevel,startLevel); start(); },
       setDemo:(b)=>{ demo=!!b; },
+      setChar:(v)=>{ const i=(typeof v==='string')?CHARS.findIndex(c=>c.name===v):(v|0); if(i>=0&&i<CHARS.length){ selChar=i; if(typeof charSave==='function')charSave(i); if(typeof buildCharSelect==='function')buildCharSelect(); } return CHARS[selChar].name; },
+      trait:()=>trait(),
+      forceDie:(c)=>die(c),
+      startAt:(n)=>{ demo=false; startLevel=Math.max(1,Math.min(11,n|0)); maxLevel=Math.max(maxLevel,startLevel); start(); },
+      clearIGrace:()=>{ igrace=0; },
+      // spawn a pickup relative to the player's centre (dx px ahead, dy px below player-mid)
+      spawnCoinAt:(dx,dy)=>{ if(state==='run')coinsArr.push({x:player.x+P_W/2+(dx==null?260:dx),y:player.y-curH()*0.5+(dy||0),bob:0,got:false}); },
+      spawnHeartAt:(dx,dy)=>{ if(state==='run')hearts.push({x:player.x+P_W/2+(dx==null?260:dx),y:player.y-curH()*0.5+(dy||0),bob:0,got:false}); },
+      clearPickups:()=>{ coinsArr.length=0; hearts.length=0; },
+      clearObstacles:()=>{ obstacles.length=0; gaps.length=0; drone=null; boss=null; roofBoss=null; surge=null; ropeBalls.length=0; fallers.length=0; },
+      coinInfo:()=>({n:coinsArr.length,coins,dx:coinsArr[0]?Math.round(coinsArr[0].x-(player.x+P_W/2)):null,cy:coinsArr[0]?Math.round(coinsArr[0].y):null}),
+      heartInfo:()=>({n:hearts.length,heartsGot,dx:hearts[0]?Math.round(hearts[0].x-(player.x+P_W/2)):null}),
+      setScoreState:(d,c,b)=>{ if(d!=null)dist=d; if(c!=null)coins=c; if(b!=null)bonus=b; },
+      getBonus:()=>bonus,
+      airHit:()=>{ // does a standing player's head collide with a standard air bar? (true=collides=dies)
+        const t=trait(), airLen=t.airLeniency||0, top=player.y-H_STAND, bottom=GROUND_Y-BAR_BOTTOM_OFF; return (top+airLen)<bottom; },
+      obstaclePad:()=>{ const t=trait(); return t.hitPad!=null?t.hitPad:7; },
       setHearts:(n)=>{ heartsGot=n|0; },
       spawnHammer:()=>{ if(state==='run'){ speed=Math.max(speed,340); hammer={x:W+50,y:GROUND_Y-HAM_Y_OFF,bob:0}; } },
       scene:()=>({ level,lvlDist:Math.round(lvlDist),speed:Math.round(speed),zone,
