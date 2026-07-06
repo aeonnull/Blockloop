@@ -21,6 +21,8 @@ Goal: continue building the Blockheads Runner game (index.html).
 
 - [x] **Character trait system** — tier: HEAVY — done-check: each of the 6 non-CLASSIC characters (MAGENTA, CHARCOAL, SWOOSH, BTC, TETRIS, CAMO) has a genuine gameplay bonus paired with a genuine downside per the locked roster (star dmg/range vs. smaller heart radius; free shield vs. lower level-clear bonus; dodge chance vs. post-dodge pickup lockout; magnet vs. shorter attack range; 2x score vs. bigger hitbox; smaller hitbox vs. cheaper coins), CLASSIC stays a neutral baseline, verified per-character via Playwright. — **PASS** (24/24 checks): single `CHAR_TRAIT` lookup, CLASSIC/unknown = no-op, shield/dodge centralized in `die()` with invuln grace window, pit-falls bypass shield/dodge, 0 bot soft-locks across all 7 characters.
 
+- [ ] **CHARCOAL: mafia-boss outfit / MAGENTA: piano outfit** — tier: MID — done-check: both characters get a drawn overlay (pinstripe suit + gold chain + bowtie + fedora brim for CHARCOAL; wood-panel + piano-key pattern for MAGENTA) matching the user's reference images, layered on top of the existing sprite in `drawGenericChar`, verified with screenshots against the references.
+
 ## Log
 
 <!-- escalations and hard stops get noted here by the loop -->
