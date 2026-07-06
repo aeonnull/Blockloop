@@ -1200,34 +1200,56 @@
     const t=rb.t, ph=rb.phase;
     const running = (ph==='in'||ph==='out');
     const step = running ? Math.abs(Math.sin(rb.bob*9))*7 : Math.abs(Math.sin(rb.bob*4.5))*3; // always alive
+    // --- REAL multi-frame animation: swap between the player's own roof-zone Blockhead
+    //     frames (ninja1/2/3) per phase, the same way drawPlayer does, instead of
+    //     distorting one static image. The per-phase sx/sy/ox/rot below now only add a
+    //     little life on top of the pose the FRAME already carries. ---
+    const DUCK_AR = P_W/H_DUCK;                 // ninja1 drawn wide & short = the player's crouch/duck pose
+    let img=ninja1, aspect=NIN1_AR;
     let sx=1, sy=1, rot=Math.sin(rb.bob*3.2)*0.03, ox=0, oy=-step;
-    if(ph==='chargeH'){ const k=Math.min(1,t/0.8); sy=1-0.12*k; sx=1+0.09*k; oy+=7*k; rot-=0.06*k; }      // crouch & lean back (wind-up)
-    else if(ph==='fireH'){ const k=Math.max(0,1-t*5); sy=1+0.10*k; sx=1-0.05*k; ox=-18*k; rot=0.07*k; }   // spring/lunge at the runner
-    else if(ph==='chargeL'){ const k=Math.min(1,t/0.8); sy=1-0.50*k; sx=1+0.30*k; }                        // deep duck for the low sweep
-    else if(ph==='fireL'){ const k=Math.max(0,1-t*5); sy=0.52; sx=1.30; ox=-15*k; }
-    else if(ph==='open'){ rot=Math.sin(t*10)*0.11; oy+=Math.sin(t*7)*3; }                                  // staggers, dazed & exposed
-    const baseH=113, dh=baseH*sy, dw=P_W*sx;   // matches the roof-zone ninja sprite's actual rendered height (~106-121px), not the taller H_STAND hitbox
+    if(running){                                                        // running on/off: alternate two run frames each step
+      const fr=Math.floor(rb.bob*9)%2===0; img=fr?ninja1:ninja2; aspect=fr?NIN1_AR:NIN2_AR; }
+    else if(ph==='chargeH'){ img=ninja2; aspect=NIN2_AR;               // reared/upright high-beam wind-up
+      const k=Math.min(1,t/0.8); sy=1-0.06*k; sx=1+0.05*k; oy+=5*k; rot-=0.05*k; }
+    else if(ph==='fireH'){ img=ninja3; aspect=NIN3_AR;                 // lunge forward at the runner
+      const k=Math.max(0,1-t*5); sy=1+0.06*k; ox=-16*k; rot=0.06*k; }
+    else if(ph==='chargeL'){ img=ninja1; aspect=DUCK_AR;               // deep crouch for the low sweep
+      const k=Math.min(1,t/0.8); sx=1+0.06*k; sy=1-0.04*k; }
+    else if(ph==='fireL'){ img=ninja1; aspect=DUCK_AR;                 // crouched lunge, stays low
+      const k=Math.max(0,1-t*5); sx=1.06; ox=-14*k; }
+    else if(ph==='chargeBall'){ img=ninja2; aspect=NIN2_AR;            // hoist the rope-ball overhead (reared)
+      const k=Math.min(1,t/0.85); sy=1+0.05*k; oy-=4*k; rot-=0.05*k; }
+    else if(ph==='throwBall'){ img=ninja3; aspect=NIN3_AR;             // throwing lunge
+      const k=Math.max(0,1-t*4); sy=1+0.05*k; ox=-16*k; rot=0.06*k; }
+    else if(ph==='open'){ img=ninja1; aspect=DUCK_AR;                  // slumped/staggered & exposed (frame + wobble)
+      rot=Math.sin(t*10)*0.12; oy+=Math.sin(t*7)*3; sy=0.95; }
+    // gapP + any other transient falls through as the default idle ninja1 + bob
+    // Frame-driven size, exactly like drawPlayer (w=P_W*sx, h=(w/aspect)*sy): the boss's
+    // rendered height now follows whatever frame is showing, matching the player's own
+    // on-screen scale by construction instead of via a second hardcoded height constant.
+    const dw=P_W*sx, dh=(dw/aspect)*sy;
     const cx=rb.x+(lowPose?BIPL_W:BIPI_W)/2+ox, cy=GROUND_Y+oy;
     const glow = ph.indexOf('charge')===0 ? Math.min(1,t/0.8) : ph.indexOf('fire')===0 ? 1 : ph==='open'?0.08:0.22;
     // subtle charge halo only (no big blob)
     if(glow>0.3){ ctx.save(); ctx.globalAlpha=0.13*glow; ctx.fillStyle=CORE;
       ctx.beginPath(); ctx.arc(cx, cy-dh*0.5, dw*0.55, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
-    // body (mirrored to face the runner), squashing/stretching just like the player
+    // body (mirrored to face the runner), squash/stretch + red/black recolor on the CURRENT frame
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot); ctx.scale(-1,1);
-    if(bossBhImg.complete&&bossBhImg.naturalWidth>0){
+    if(img&&img.complete&&img.naturalWidth>0){
       ctx.imageSmoothingEnabled=false;
       ctx.filter='grayscale(1) brightness(0.35) sepia(1) saturate(6) hue-rotate(-50deg) contrast(1.15)';
-      ctx.drawImage(bossBhImg,-dw/2,-dh,dw,dh);
+      ctx.drawImage(img,-dw/2,-dh,dw,dh);
       ctx.filter='none';
     }
     else { ctx.fillStyle='#3a0d0d'; ctx.fillRect(-dw/2,-dh,dw,dh); }
     ctx.restore();
     // "BIP" / "110" pixel-font label on the torso — drawn WITHOUT the scale(-1,1)
-    // above so it reads left-to-right instead of mirrored.
+    // above so it reads left-to-right instead of mirrored. Anchored proportionally
+    // (~60% up the CURRENT frame's height) so it stays on the torso as dh varies by frame.
     { ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot);
       ctx.imageSmoothingEnabled=false;
-      const tc=getBipTextCanvas(), tw=dw*0.6, th=tw*(tc.height/tc.width);
-      ctx.drawImage(tc, -tw/2, -dh*0.66, tw, th);
+      const tc=getBipTextCanvas(), tw=dw*0.55, th=tw*(tc.height/tc.width);
+      ctx.drawImage(tc, -tw/2, -dh*0.60, tw, th);
       ctx.restore(); }
     // focused beam-charge energy at the muzzle (high or low) — clearly the beam, not an eye
     const ey=lowPose?lowY:eyeY, ex=rb.x+14;
