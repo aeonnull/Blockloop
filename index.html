@@ -1182,7 +1182,7 @@
     else if(ph==='chargeL'){ const k=Math.min(1,t/0.8); sy=1-0.50*k; sx=1+0.30*k; }                        // deep duck for the low sweep
     else if(ph==='fireL'){ const k=Math.max(0,1-t*5); sy=0.52; sx=1.30; ox=-15*k; }
     else if(ph==='open'){ rot=Math.sin(t*10)*0.11; oy+=Math.sin(t*7)*3; }                                  // staggers, dazed & exposed
-    const baseH=H_STAND, dh=baseH*sy, dw=P_W*sx;   // exactly the player's footprint (same size)
+    const baseH=113, dh=baseH*sy, dw=P_W*sx;   // matches the roof-zone ninja sprite's actual rendered height (~106-121px), not the taller H_STAND hitbox
     const cx=rb.x+(lowPose?BIPL_W:BIPI_W)/2+ox, cy=GROUND_Y+oy;
     const glow = ph.indexOf('charge')===0 ? Math.min(1,t/0.8) : ph.indexOf('fire')===0 ? 1 : ph==='open'?0.08:0.22;
     // subtle charge halo only (no big blob)
