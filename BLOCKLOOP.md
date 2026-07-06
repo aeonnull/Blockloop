@@ -4,7 +4,17 @@ Goal: continue building the Blockheads Runner game (index.html).
 
 ## Tasks
 
-- [ ] **BIP 110 boss: recolor to red/black + pixel "BIP 110" body text** — tier: MID — done-check: loading index.html#dev in a browser, triggering the LVL 9 debug button and letting the boss appear, shows a boss body that reads as black/dark with red highlights (not green) and legible, non-mirrored "BIP" / "110" pixel-style text on the torso.
+- [x] **BIP 110 boss: recolor to red/black + pixel "BIP 110" body text** — tier: MID — done-check: loading index.html#dev in a browser, triggering the LVL 9 debug button and letting the boss appear, shows a boss body that reads as black/dark with red highlights (not green) and legible, non-mirrored "BIP" / "110" pixel-style text on the torso. — **PASS**, verified with screenshots (roof:in/chargeH/fireH).
+
+- [ ] **Rooftop skyline: visible height variation** — tier: MID — done-check: screenshot of a "roof" zone level (e.g. level 7) shows a clearly jagged/uneven building skyline (varied heights, not a flat repeating silhouette), while ground collision/gameplay is unchanged (purely visual, no physics change).
+
+- [ ] **BIP 110 encounter #1 — ninja-star duel, gated by 5 collected stars** — tier: HEAVY — done-check: reaching the encounter's level without having thrown/collected 5 ninja stars in earlier levels shows the encounter does NOT trigger (or shows a locked/skip state); with >=5 stars collected, BIP 110 appears as a simpler early duel using the existing star-throw mechanic. No regression to the existing final BIP 110 (level 9) fight.
+
+- [ ] **BIP 110 encounter #2 — rope-ball duel (duck to dodge, throw back)** — tier: HEAVY — done-check: a new obstacle type ("rope-ball") that BIP 110 throws is added, player must duck under it or it's lethal like other obstacles; visually and behaviourally distinct from the existing rope/mtn/air obstacle types; appears in a mid-game encounter with BIP 110 as a second duel, gated on progress from encounter #1.
+
+- [ ] **BIP 110 encounter #3 — laser finale, gated by collected hearts** — tier: MID — done-check: the existing level-9 laser boss fight only becomes reachable once the player has collected a set number of hearts (reusing `heartsGot`); below the threshold the encounter is skipped/deferred; at/above threshold it plays out as today's BIP 110 laser duel unchanged.
+
+- [ ] **Water crossing with floating/climbable blocks** — tier: HEAVY — done-check: a new section (targeted around level 6/10/11) requires jumping a gap wider than a normal jump, using intermediate floating blocks the player can stand on/climb across; verified by demo-bot or manual playtest successfully crossing without it reading as an unfair/impossible gap.
 
 ## Log
 
