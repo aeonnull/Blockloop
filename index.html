@@ -179,7 +179,7 @@
   let lbFallback=[{n:'MIO',s:1450},{n:'SATOSHI',s:1120},{n:'ORDINAL',s:880},{n:'BLOCK',s:610},{n:'DEGEN',s:420}];
   function esc(t){return String(t).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
   let player,obstacles,particles,spawnX,bgScroll,shakeT,flashT,coinsArr,coinTimer,lastAction;
-  let coyote,buffer,jumpHeld,ducking,deadCooldown=0,drone=null,droneTimer,landT=0,fireT=0,fireCd=0,hammer=null,hammerTimer,zapT=0,charges=0,swingT=0,swingTarget=null,swingHit=false,demo=false,botHold=0,boss=null,bossTimer=24,shieldPick=null,shieldTimer=16,hasShield=false,shieldFlashT=0,gaps=[],zone='street',zoneT=2200,gapX=0,zoneBannerT=0,stars=[],lanterns=[],lanternTimer=2,roofBoss=null,pendingRoofBoss=false,roofVisits=0,level=1,startLevel=1,maxLevel=1,lvlDist=0,lvlBannerT=0,bossDone=false,zoneBlend=0,clearedT=0,plats=[],hearts=[],heartsGot=0,platX=0,roofRuns=0,l1Idx=0,blueBlend=0,fallers=[],fallX=1400,heartLvlDone=false;
+  let coyote,buffer,jumpHeld,ducking,deadCooldown=0,drone=null,droneTimer,landT=0,fireT=0,fireCd=0,hammer=null,hammerTimer,zapT=0,charges=0,swingT=0,swingTarget=null,swingHit=false,demo=false,botHold=0,botShortHop=false,boss=null,bossTimer=24,shieldPick=null,shieldTimer=16,hasShield=false,shieldFlashT=0,gaps=[],zone='street',zoneT=2200,gapX=0,zoneBannerT=0,stars=[],lanterns=[],lanternTimer=2,roofBoss=null,pendingRoofBoss=false,roofVisits=0,level=1,startLevel=1,maxLevel=1,lvlDist=0,lvlBannerT=0,bossDone=false,zoneBlend=0,clearedT=0,plats=[],hearts=[],heartsGot=0,platX=0,roofRuns=0,l1Idx=0,blueBlend=0,fallers=[],fallX=1400,heartLvlDone=false;
   let bonus=0,blockHeight,blockFill,chain,surge,txArr,txTimer,confirmMsgT,txPops;
 
   function reset(){
@@ -1100,48 +1100,71 @@
       ctx.fillStyle='#6b6b6b'; ctx.fillRect(x+1,y+1,4,7);
       ctx.fillStyle='#6b3f17'; ctx.fillRect(x+6,y+9,4,13); } }
   }
+  const BOT_AIRTIME=0.813;   // full-jump hang time (2*|JUMP_V|/GRAV)
   function botThink(dt){
     if(state==='dead'){ if(deadCooldown<=0) start(); return; }
     if(state!=='run') return;
     const px=player.x, pw=P_W, front=px+pw, gnd=player.onGround;
-    let needJump=false, needDuck=false, jumpHold=0.2, shoot=false;
-    const droneDanger = drone && (drone.phase==='charge'||drone.phase==='fire');
-    // find the NEAREST jump/duck threat; handle shoot-targets independently
-    let near=null, nd=1e9;
+    let needJump=false, needDuck=false, jumpHold=0.42, shortHop=false, shoot=false;
+
+    // ---- collect nearest threats ahead, by kind ----
+    let ngObs=null, ngd=1e9;      // solid (ground/fall obstacle) -> jump
+    let naObs=null, nad=1e9;      // air bar -> duck
     for(const o of obstacles){
+      if(o.x+(o.w||0) < px-6) continue;                // already passed
       const d=o.x-front;
-      if(o.x+o.w < px-6) continue;                 // already passed
-      if(o.type==='rope'){ if(!o.cut && d>15 && d<175) shoot=true; continue; }
-      if(o.type==='mtn'){ if(o.hp>0 && charges>0 && d>-40 && d<300) shoot=true; continue; }
-      if(o.type==='fall' && !o.landed && o.y+o.h < GROUND_Y-130) continue; // still high up, ignore for now
-      if(d < nd){ nd=d; near=o; }
+      if(o.type==='rope'){ if(!o.cut && d>10 && d<200) shoot=true; continue; }
+      if(o.type==='mtn'){ if(o.hp>0){ if(charges>0 && d>-40 && d<320) shoot=true;
+          else if(charges<=0 && d<ngd){ ngd=d; ngObs=o; } }             // no charge -> treat wall as jump threat (bail)
+        continue; }
+      if(o.type==='air'){ if(d<nad){ nad=d; naObs=o; } continue; }
+      if(d<ngd){ ngd=d; ngObs=o; }                     // ground / fall solid
     }
-    if(near){
-      const o=near, d=o.x-front;
-      if(o.type==='air'){ if(d<speed*0.42) needDuck=true; }
-      else { const R=Math.max(8, speed*0.407-(o.w+P_W)/2); if(d<R){ needJump=true; jumpHold=0.42; } }  // ground + fall: apex-centered per width
+    // fallers already on/near the ground path behave like solid blocks
+    for(const fb of fallers){ if(fb.state==='warn') continue; if(fb.x+34<px-6) continue;
+      const d=fb.x-front; if(d<ngd){ ngd=d; ngObs={type:'fall',w:34}; } }
+    // roof gaps -> must jump across
+    let ngap=1e9; for(const g of gaps){ if(g.x+g.w<px-6) continue; const d=g.x-front; if(d<ngap) ngap=d; }
+
+    // ---- duck threats (only work while grounded) ----
+    // beam only exists during 'fire'; pre-position in late 'charge'. Don't duck during the drone's slow approach.
+    const droneDanger = drone && (drone.phase==='fire' || (drone.phase==='charge' && drone.t>0.5));
+    const airETA = naObs ? nad/speed : 1e9;
+    if(naObs){                                          // duck early, and HOLD until the bar's back edge clears the player
+      const approaching = nad>0 && nad < speed*0.48;
+      const overlapping = naObs.x < px+pw-2 && naObs.x+naObs.w > px+2;
+      if(approaching || overlapping) needDuck=true;
     }
     if(droneDanger) needDuck=true;
     if(boss&&(boss.phase==='charge'||boss.phase==='fire')) needDuck=true;
     if(roofBoss){ const ph=roofBoss.phase;
       if(ph==='chargeH'||ph==='fireH') needDuck=true;
-      else if(ph==='chargeL'||ph==='fireL'){ if(roofBoss.t>0.55&&gnd){ needJump=true; jumpHold=0.35; } }
+      else if(ph==='chargeL'||ph==='fireL'){ if(roofBoss.t>0.5&&gnd){ needJump=true; jumpHold=0.35; } }
       else if(ph==='open'&&fireCd<=0) shoot=true; }
-    if(needDuck) needJump=false;                          // duck always wins over a farther jump
-    if(gnd&&!needDuck){ for(const g of gaps){ const d=g.x-front; if(d>-6&&d<speed*0.16){ needJump=true; jumpHold=0.45; break; } } }
-    if(gnd&&!needDuck){ for(const fb of fallers){ if(fb.state==='warn')continue; const d=fb.x-front; if(d>-6&&d<speed*0.15){ needJump=true; jumpHold=0.3; break; } } }
-    if(hammer && gnd && !needJump && !needDuck){ const d=hammer.x-front; if(d<speed*0.40 && d>-30){ needJump=true; jumpHold=0.40; } }
-    if(!needJump && !needDuck && gnd){
-      for(const cn of coinsArr){ if(cn.got)continue; const d=cn.x-(px+pw/2), high=GROUND_Y-cn.y;
-        if(high>70 && d>speed*0.08 && d<speed*0.40){ needJump=true; jumpHold=Math.min(0.42,0.16+high/800); break; } }
+
+    // ---- jump threats (grounded, and not currently forced to duck) ----
+    // lead distance so the apex sits over the obstacle, with an early-safety bias + low-speed floor
+    const trig=(w)=> Math.max(6, speed*0.05, speed*0.40 - (w+pw)/2);
+    if(!needDuck && gnd){
+      // if an air bar lands right after, use a short hop so we're grounded in time to duck it
+      const tightAfter = airETA < BOT_AIRTIME*1.05;
+      if(ngObs && ngd>-30 && ngd<trig(ngObs.w||34)){ needJump=true; jumpHold=0.42; if(tightAfter){ shortHop=true; jumpHold=0.16; } }
+      if(!needJump && ngap>-6 && ngap<speed*0.20){ needJump=true; jumpHold=0.45; }
+      if(!needJump && hammer){ const d=hammer.x-front; if(d>-30 && d<speed*0.40 && !tightAfter){ needJump=true; jumpHold=0.40; } }
     }
-    if(!needJump && !needDuck && gnd){
-      for(const t of txArr){ if(t.got)continue; const d=t.x-(px+pw/2), high=GROUND_Y-t.y;
-        if(high>70 && d>speed*0.08 && d<speed*0.40){ needJump=true; jumpHold=Math.min(0.42,0.16+high/800); break; } }
+
+    // ---- opportunistic coin / tx grab (lowest priority; never when a threat is within a jump) ----
+    const clearAhead = ngd>speed*0.95 && ngap>speed*0.95 && airETA>BOT_AIRTIME*1.1;
+    if(!needJump && !needDuck && gnd && clearAhead){
+      const grab=(arr)=>{ for(const c of arr){ if(c.got)continue; const d=c.x-(px+pw/2), high=GROUND_Y-c.y;
+        if(high>85 && d>speed*0.12 && d<speed*0.33){ needJump=true; jumpHold=Math.min(0.42,0.18+high/800); return true; } } return false; };
+      if(!grab(coinsArr)) grab(txArr);
     }
+
+    if(needDuck) needJump=false;                        // duck always wins over a farther jump
     ducking = (needDuck && gnd);
-    if(needJump && gnd && botHold<=0){ doJump(); jumpHeld=true; botHold=jumpHold; }
-    if(botHold>0){ botHold-=dt; if(botHold<=0) jumpHeld=false; }
+    if(needJump && gnd && botHold<=0){ doJump(); jumpHeld=true; botHold=jumpHold; botShortHop=shortHop; }
+    if(botHold>0){ botHold-=dt; if(botHold<=0){ jumpHeld=false; if(botShortHop && player.vy<0){ player.vy*=JUMP_CUT; } botShortHop=false; } }
     if(shoot) doShoot();
   }
   let last=performance.now();
