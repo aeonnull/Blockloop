@@ -211,7 +211,7 @@
     obstacles=[]; particles=[]; spawnX=W+340; bgScroll=0; lastAction='jump';
     shakeT=0; flashT=0; coyote=0; buffer=0; jumpHeld=false; ducking=false;
     drone=null; droneTimer=9; boss=null; bossTimer=24; shieldPick=null; shieldTimer=16; hasShield=false; shieldFlashT=0; gaps=[]; zone='street'; zoneT=2200; zoneBannerT=0; stars=[]; ropeBalls=[]; lanterns=[]; lanternTimer=2; roofBoss=null; pendingRoofBoss=false; roofVisits=0; landT=0;
-    level=startLevel; maxLevel=Math.max(maxLevel,level); lvlDist=0; bossDone=false; lvlBannerT=2.6; starsThrown=0;
+    level=startLevel; maxLevel=Math.max(maxLevel,level); lvlDist=0; bossDone=false; lvlBannerT=2.6; starsThrown=0; heartsGot=0;
     zone=(level>=7&&level<=9)?'roof':'street'; zoneBlend=(zone==='roof')?1:0; gapX=W+340;
     if(level===7||level===8||level===9)pendingRoofBoss=true;
     speed=LVL_SPD[Math.min(level,11)]; heartLvlDone=false;
@@ -511,7 +511,8 @@
     zoneBlend+=(((zone==='roof')?1:0)-zoneBlend)*Math.min(1,dt*1.6);
     blueBlend+=(((zone==='street'&&level>=5&&level<=6)?1:0)-blueBlend)*Math.min(1,dt*1.2);
     if(level<11){
-      if(level===9){ if(bossDone){ bonus+=150; levelUp(); } }
+      if(level===9){ if(bossDone){ bonus+=150; levelUp(); }
+        else if(heartsGot<3 && !roofBoss && lvlDist>16000){ bonus+=150; levelUp(); } }
       else if(level===7 && bossDone){ bonus+=150; levelUp(); }
       else if(lvlDist>LVL_LEN[level] && !surge && !boss && !roofBoss){ bonus+=150; levelUp(); }
     } else {
@@ -572,7 +573,7 @@
     if(level>=2 && zone==='street' && !heartLvlDone && lvlDist>LVL_LEN[Math.min(level,10)]*0.55){
       heartLvlDone=true; hearts.push({x:W+80,y:GROUND_Y-232,bob:0,got:false}); }
     // ---------- BIP 110 (takduellen: ducka - hoppa - kasta) ----------
-    if(zone==='roof' && pendingRoofBoss && !roofBoss && (level===7 ? (starsThrown>=5 && lvlDist>1500) : lvlDist>1500) && !gaps.some(g=>g.x>player.x&&g.x<W+320)){
+    if(zone==='roof' && pendingRoofBoss && !roofBoss && (level===7 ? (starsThrown>=5 && lvlDist>1500) : level===9 ? (heartsGot>=3 && lvlDist>1500) : lvlDist>1500) && !gaps.some(g=>g.x>player.x&&g.x<W+320)){
       roofBoss={x:W+180,phase:'in',t:0,bob:0,cycle:0,cycleTarget:(level===7?1:level===8?2:3),ball:(level===8)}; pendingRoofBoss=false; }
     if(roofBoss){
       const rb=roofBoss; rb.t+=dt; rb.bob+=dt;
@@ -1406,6 +1407,7 @@
         phase:(roofBoss&&('roof:'+roofBoss.phase))||(boss&&('boss:'+boss.phase))||(drone&&('drone:'+drone.phase))||null}),
       play:(n)=>{ demo=true; startLevel=Math.max(1,Math.min(11,n|0)); maxLevel=Math.max(maxLevel,startLevel); start(); },
       setDemo:(b)=>{ demo=!!b; },
+      setHearts:(n)=>{ heartsGot=n|0; },
       spawnHammer:()=>{ if(state==='run'){ speed=Math.max(speed,340); hammer={x:W+50,y:GROUND_Y-HAM_Y_OFF,bob:0}; } },
       scene:()=>({ level,lvlDist:Math.round(lvlDist),speed:Math.round(speed),zone,
         p:{x:Math.round(player.x),y:Math.round(player.y),onGround:player.onGround,ducking,vy:Math.round(player.vy)},
