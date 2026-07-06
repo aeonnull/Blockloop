@@ -6,7 +6,7 @@ Goal: continue building the Blockheads Runner game (index.html).
 
 - [x] **BIP 110 boss: recolor to red/black + pixel "BIP 110" body text** — tier: MID — done-check: loading index.html#dev in a browser, triggering the LVL 9 debug button and letting the boss appear, shows a boss body that reads as black/dark with red highlights (not green) and legible, non-mirrored "BIP" / "110" pixel-style text on the torso. — **PASS**, verified with screenshots (roof:in/chargeH/fireH).
 
-- [ ] **Rooftop skyline: visible height variation** — tier: MID — done-check: screenshot of a "roof" zone level (e.g. level 7) shows a clearly jagged/uneven building skyline (varied heights, not a flat repeating silhouette), while ground collision/gameplay is unchanged (purely visual, no physics change).
+- [x] **Rooftop skyline: visible height variation** — tier: MID — done-check: screenshot of a "roof" zone level (e.g. level 7) shows a clearly jagged/uneven building skyline (varied heights, not a flat repeating silhouette), while ground collision/gameplay is unchanged (purely visual, no physics change). — **PASS**, verified with screenshots (roof vs street), no collision/physics touched.
 
 - [ ] **BIP 110 encounter #1 — ninja-star duel, gated by 5 collected stars** — tier: HEAVY — done-check: reaching the encounter's level without having thrown/collected 5 ninja stars in earlier levels shows the encounter does NOT trigger (or shows a locked/skip state); with >=5 stars collected, BIP 110 appears as a simpler early duel using the existing star-throw mechanic. No regression to the existing final BIP 110 (level 9) fight.
 

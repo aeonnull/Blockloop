@@ -803,6 +803,7 @@
     }
     drawSkyline(bgScroll*0.25,200,'#0c1620',80,9000);
     drawSkyline(bgScroll*0.5,150,'#0a1118',58,4500);
+    drawRoofSkyline(bgScroll*0.4);
     ctx.fillStyle=INK; ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
     ctx.fillStyle='#241f1a'; ctx.fillRect(0,GROUND_Y,W,4);
     ctx.fillStyle='#1c1814'; const tick=42,off=(bgScroll%tick);
@@ -825,6 +826,31 @@
       if(r>0.45){ctx.globalAlpha=0.5;ctx.fillStyle=(r>0.72?ORANGE:'#caa15f');
         ctx.fillRect(x+10,GROUND_Y-h+18,5,5);ctx.fillRect(x+w-14,GROUND_Y-h+34,5,5);ctx.globalAlpha=1;}
     }
+  }
+  // extra jagged foreground silhouette layer, only visible while in/transitioning to the roof zone.
+  // heights come from a fixed repeating pattern (not per-frame random) so the skyline tiles
+  // seamlessly and doesn't flicker as bgScroll advances.
+  const ROOF_H_PATTERN=[0.22,0.95,0.4,0.68,0.15,1.0,0.5,0.8,0.3,0.6,0.9,0.35];
+  function drawRoofSkyline(scroll){
+    if(zoneBlend<0.01) return;
+    const step=68,maxH=250,baseH=85,off=scroll%step;
+    ctx.globalAlpha=zoneBlend;
+    for(let x=-off-step;x<W+step;x+=step){
+      const idx=Math.floor((x+scroll)/step);
+      const patt=ROOF_H_PATTERN[((idx%ROOF_H_PATTERN.length)+ROOF_H_PATTERN.length)%ROOF_H_PATTERN.length];
+      const h=baseH+patt*maxH, w=step-6, top=GROUND_Y-h;
+      ctx.fillStyle='#170d10'; ctx.fillRect(x,top,w,h);
+      ctx.fillStyle='rgba(224,163,60,0.4)'; ctx.fillRect(x,top,w,3);
+      if(patt>0.82){ // antenna on the tallest buildings
+        ctx.fillStyle='#170d10'; ctx.fillRect(x+w/2-2,top-24,4,24);
+        ctx.fillStyle=ORANGE; ctx.fillRect(x+w/2-2,top-24,4,4);
+      } else if(patt>0.55){ // water tower on mid-tall buildings
+        ctx.fillStyle='#170d10';
+        ctx.fillRect(x+w*0.32,top-20,w*0.36,20);
+        ctx.fillRect(x+w*0.36,top-26,w*0.28,7);
+      }
+    }
+    ctx.globalAlpha=1;
   }
 
   // player = MIO's artwork. neutral(1) running, jump = up(5)/apex(6), land/duck(4)
