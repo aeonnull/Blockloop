@@ -156,6 +156,9 @@
   const CHARS = [{name:'CLASSIC',def:true,aspect:0.50,img:null}];
   CHAR_ALT.forEach(c=>{ const im=new Image(); im.src=c.src; CHARS.push({name:c.name,aspect:c.aspect,img:im}); });
   let selChar=0;
+  // BIP-110 boss = a blackened Blockhead silhouette (faces left, animated in code).
+  const bossBhImg=new Image(); bossBhImg.src=/*__BOSSBH__*/'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAG4AAADcCAYAAACRWZSFAAAEzElEQVR4AeycUYrbQBBEHZ9hyf3PF/YOyRgCYpFAzHRX95T9ghaMrOkqvUd/LIR9Phb+fX39/suPlsGdliVxd0P5Xk8AcXrGkgTESbDqhyJOz1iSgDgJVv1QxOkZSxIQJ8GqH4o4PeOlhLvfk5vFLb0ThwYBxA0IjhfiHK2NzogbEBwvxDlaG50RNyA4XohztDY6I25AcLyed7/oXX3v+KLv1vmzN87YJuJM5SEOcaYETGuzcYgzJWBam41DXD+B7+8/v6I/GW8R7fA6f9eDjbsjtOn3iGsUE4lGXIRe41nENcKPRCMuQq/xLOIa4UeiEReh13gWcY3wI9GIi9BrPIu4RviRaMRF6DWeTRDX2P6DoxFnKh9xiDMlYFqbjUNcP4Gr/7w7ey/jLWYzr56/68HG3RHa9HvEbSrmrhbi7ght+r2/uE3BqmshTk1YNB9xIrDqsYhTExbNR5wIrHos4tSERfMRJwKrHos4NWHRfMSJwKrHIi5IuOs44rrIB3MRFwTYdRxxXeSDuYgLAuw6jrgu8sFcxAUBdh1HXBf5YC7iggC7jiOui3ww97+44BSOlxNAXDnynEDE5XAsn4K4cuQ5gYjL4Vg+BXHlyHMCEZfDsXwK4sqR5wQiLodj+ZQ9xJW/tn8g4kwdPl9/Rjb6Y/rubbWjvF/n2bg2fbFgxMX4tZ1GXBv6WDDiYvzaTiOuDX0sGHExfm2nEfd4PNroB4IRF4DXefR59eeIZu91voBj9izfq+fZOEfzozPiBgTHC3GO1kZnxA0IjhfiHK2NzogbEBwvxPVbW2qAuCVs/YcQ1+9gqQHilrD1H0Jcv4OlBohbwtZ/CHH9DpYaIG4JW/8hxPU7WGqAuCVs/YfyxPW/y0c1QJypbsQhzpSAaW02DnGmBExrs3GIMyVgWpuNQ1wvgU9LZ+NMjSMOcaYETGuzcYgzJWBam41DnCkB09psHOJMCeTULp/CxpUjzwlEXA7H8imIK0eeE4i4HI7lUxBXjjwnEHE5HMunIK4ceU4g4nI4lk9BXDnynMCf4nJmMqWAAOIKICsiEKegWjATcQWQFRGIU1AtmIm4AsiKCMQpqBbMRFwBZEUE4hRUC2ZuJa7gfd8mAnGmKhGHOFMCprXZOMSZEjCtzcYhzpSAaW02DnGmBI7aVp/YOCtdR1nEHSysPiHOStdRFnEHC6tPiLPSdZRF3MHC6hPirHQdZRF3sLD6hLhtdM0VQdwcr22eRtw2KuaKIG6O1zZPI24bFXNFEDfHa5unEbeNirkiiJvjtc3TiNtGxVwRxM3x2ubpdHHbvNmbF0GcqWDEIc6UgGltNg5xpgRMa7NxiDMlYFqbjUPcFgQ+pgQbZ6oacYgzJWBam41DnCkB09psHOJMCZjWZuMQZ0ogtXbdMDaujnVqEuJScdYNQ1wd69QkxKXirBuGuDrWqUmIS8VZNwxxdaxTkxCXirNuGOLqWKcmXYpLTWCYhADiJFj1QxGnZyxJQJwEq34o4vSMJQmIk2DVD0WcnrEkAXESrPqhiNMzliTsKE7you82FHGmRhGHOFMCprXZOMSZEjCtzcYhzpSAaW02DnGmBE61PW6wcR6eTi0Rd0LicQNxHp5OLRF3QuJxA3Eenk4tEXdC4nHjHwAAAP//5weF3QAAAAZJREFUAwC1Npn+Rq6irAAAAABJRU5ErkJggg==';
+  const BOSSBH_AR=/*__BOSSBH_AR__*/0.5;
   const mjolnirImg=new Image(); mjolnirImg.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKoAAAHRCAYAAAD65CI0AAABWGlDQ1BJQ0MgUHJvZmlsZQAAeJx9kLFLw1AQxr9WpaB1EB0cHDKJQ5SSCro4tBVEcQhVweqUvqapkMZHkiIFN/+Bgv+BCs5uFoc6OjgIopPo5uSk4KLleS+JpCJ6j+N+fO+74zggOW5wbvcDqDu+W1zKK5ulLSX1jAS9IAzm8Zyur0r+rj/j/T703k7LWb///43Biukxqp+UGcZdH0ioxPqezyXvE4+5tBRxS7IV8onkcsjngWe9WCC+JlZYzagQvxCr5R7d6uG63WDRDnL7tOlsrMk5lBNYxA48cNgw0IQCHdk//LOBv4BdcjfhUp+FGnzqyZEiJ5jEy3DAMAOVWEOGUpN3ju53F91PjbWDJ2ChI4S4iLWVDnA2Rydrx9rUPDAyBFy1ueEagdRHmaxWgddTYLgEjN5Qz7ZXzWrh9uk8MPAoxNskkDoEui0hPo6E6B5T8wNw6XwBA6diE8HYWhMAAAYiSURBVHic7d2tbhRRGIDhLd26JoCuLReAoJpLIRgMBBJkDaaSpCQYDJKA4RowNXAJ1KKLIJi2KZ5k+ZmczPZtn8eSnEyXN5/6zszGgr/6/ure2xHn3Hr65eGIc66jG+t+APgXQiVBqCQIlQShkiBUEoRKglBJECoJQiVBqCQIlQShkiBUEoRKglBJECoJQiVBqCQIlQShkiBUEoRKglBJECoJQiVBqCQIlQShkiBUEoRKglBJECoJQiVBqCRsrPsBrpOTw72LEefcfvb5Sv6/vTw7W/n7mKgkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkXMlN8avust0U+NNm/v94vlyufB4TlQShkiBUEoRKglBJECoJQiVBqCQIlQShkiBUEoRKglBJECoJQiVBqCQIlQShkjDsKsqH9++GXEc4Ojoaccxid3d3yDnM5/j4eOW/magkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCct1P8B18un1/pBzdra3hpxz58GLIefMwUQlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlwYb/jO4/Plj3I2SZqCQIlQShkiBUEoRKglBJECoJQiVBqCQIlQShkiBUEoRKglBJECoJQiVBqCRsrPsBfrd/en4x4pyDrc1L97c9uXtzyN/27cfpiGMWH7/+vFS/0cnh3srfx0QlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkDPvYxGW7QrJ/fv5mxDmLxWJxsLn5aMQ5o66Q7GxvDTmnxEQlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlYWPUJvyoLfirzMcmpjNRSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSVjazJ+Pd/hPZ6KSIFQShEqCUEkQKglCJUGoJAiVBKGSIFQShEqCUEkQKglCJUGoJAiVBKGSsFz3A1wnozbzR90UKDFRSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSbDhPyPv8J/ORCVBqCQIlQShkiBUEoRKglBJECoJQiVBqCQIlQShkiBUEoRKglBJECoJQiXBhv+MvMN/OhOVBKGSIFQShEqCUEkQKglCJUGoJAiVBKGSIFQShEqCUEkQKglCJUGoJAiVBBv+M/IO/+lMVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoKrKDPysYnpTFQShEqCUEkQKglCJUGoJAiVBKGSIFQShEqCUEkQKglCJUGoJAiVBKGSIFQSbPjPyMcmpjNRSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlwTv8ZzTq3fujvgVQYqKSIFQShEqCUEkQKglCJUGoJAiVBKGSIFQShEqCUEkQKglCJUGoJAiVBKGSYMN/RqM280fdFCgxUUkQKglCJUGoJAiVBKGSIFQShEqCUEkQKglCJUGoJAiVBKGSIFQShEqCUEmw4T8j7/CfzkQlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkCJUEoZIgVBKESoJQSRAqCUIlQagkuIoyIx+bmM5EJUGoJAiVBKGSIFQShEqCUEkQKglCJUGoJAiVBKGSIFQShEqCUEkQKglCJcGG/4x8bGI6E5UEoZIgVBKESoJQSRAqCUIlQagkCJUEoZLwCyx3bFsJ7W5PAAAAAElFTkSuQmCC';
   const zapImg=new Image();     zapImg.src='data:image/png;base64,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';
   // ----- tuning -----
@@ -1008,16 +1011,7 @@
         const y=(rb.cycle%2===0)?lowY:eyeY;
         for(let dx=0;dx<340;dx+=90){ const sx=faceX-60-dx-drift;
           ctx.fillStyle=HALO; ctx.fillRect(sx,y-4,34,8); ctx.fillStyle=CORE; ctx.fillRect(sx,y-2,34,4); } }
-      let rot=0;
-      if(rb.phase==='in') rot=Math.sin(rb.bob*6)*0.03;
-      else if(rb.phase==='chargeH') rot=-0.04*Math.min(1,rb.t/0.8);
-      else if(rb.phase==='out') rot=0.06;
-      ctx.save();
-      ctx.translate(bx+ (lowPose?BIPL_W:BIPI_W)/2, GROUND_Y+Math.sin(rb.bob*2.2)*1.5);
-      ctx.rotate(rot);
-      if(lowPose){ if(bipLowImg.complete) ctx.drawImage(bipLowImg,-BIPL_W/2,-BIPL_H,BIPL_W,BIPL_H); }
-      else { if(bipIdleImg.complete) ctx.drawImage(bipIdleImg,-BIPI_W/2,-BIPI_H,BIPI_W,BIPI_H); }
-      ctx.restore(); }
+      drawBipBoss(rb, lowPose, eyeY, lowY, CORE, HALO); }
     if(shieldPick) drawShieldIcon(shieldPick.x, shieldPick.y+Math.sin(shieldPick.bob*3)*6, 40, false);
     if(hasShield||shieldFlashT>0){ const pT=player.y-curH();
       drawShieldIcon(player.x+P_W+16, pT+38+(ducking&&player.onGround?8:0), 30, shieldFlashT>0); }
@@ -1044,10 +1038,59 @@
   }
   function drawHammer(){
     if(!hammer)return;
-    const hw=HAM_W, hh=HAM_W/HAM_AR, hx=hammer.x, hy=hammer.y+Math.sin(hammer.bob*3)*12-hh/2;
-    ctx.globalAlpha=0.22+0.16*Math.abs(Math.sin(hammer.bob*7)); ctx.fillStyle='#9fe8ff';
-    ctx.fillRect(hx-7,hy-6,hw+14,hh*0.45); ctx.globalAlpha=1;
-    if(mjolnirImg.complete&&mjolnirImg.naturalWidth>0){ctx.imageSmoothingEnabled=false;ctx.drawImage(mjolnirImg,hx,hy,hw,hh);}
+    const hw=HAM_W, hh=HAM_W/HAM_AR;
+    const cx=hammer.x+hw/2, cy=hammer.y+Math.sin(hammer.bob*3)*12;   // spin about the head's centre
+    const ang=-hammer.bob*11;                                        // whirls as it flies
+    const haveImg=mjolnirImg.complete&&mjolnirImg.naturalWidth>0;
+    ctx.imageSmoothingEnabled=false;
+    // motion trail (ghosts to the right, where it came from)
+    for(let k=4;k>=1;k--){
+      ctx.save(); ctx.globalAlpha=0.09*(5-k)/4; ctx.translate(cx+k*10, cy); ctx.rotate(ang+k*0.6);
+      if(haveImg) ctx.drawImage(mjolnirImg,-hw/2,-hh/2,hw,hh); ctx.restore();
+    }
+    // crackling aura
+    ctx.save(); ctx.globalAlpha=0.22+0.20*Math.abs(Math.sin(hammer.bob*9)); ctx.fillStyle='#9fe8ff';
+    ctx.beginPath(); ctx.arc(cx,cy,hw*0.72,0,Math.PI*2); ctx.fill(); ctx.restore();
+    if(state==='run' && Math.random()<0.6) particles.push({x:cx+(Math.random()-0.5)*hw,y:cy+(Math.random()-0.5)*hh,
+      vx:(Math.random()-0.5)*180,vy:(Math.random()-0.5)*180,life:0.16+Math.random()*0.1,c:Math.random()<0.5?'#9fe8ff':'#ffffff',s:2+Math.random()*2});
+    // the hammer itself, spinning
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
+    if(haveImg) ctx.drawImage(mjolnirImg,-hw/2,-hh/2,hw,hh);
+    else { ctx.fillStyle='#c9d6dc'; ctx.fillRect(-hw/2,-hh/2,hw,hh*0.5); }
+    ctx.restore();
+  }
+  // BIP-110: a blackened Blockhead facing left, all motion driven by phase.
+  function drawBipBoss(rb, lowPose, eyeY, lowY, CORE, HALO){
+    const t=rb.t, ph=rb.phase;
+    let sx=1, sy=1, rot=0, ox=0;
+    if(ph==='in'){ rot=Math.sin(rb.bob*6)*0.04; sy=1+Math.sin(rb.bob*3)*0.02; }
+    else if(ph==='chargeH'){ const k=Math.min(1,t/0.8); sy=1+0.05*k; rot=0.05*k; ox=-4*k; }   // rears up and back
+    else if(ph==='fireH'){ const k=Math.max(0,1-t*6); ox=12*k; rot=-0.07*k; }                  // lunges / recoils
+    else if(ph==='chargeL'){ const k=Math.min(1,t/0.8); sy=1-0.34*k; sx=1+0.12*k; }            // crouches for the low sweep
+    else if(ph==='fireL'){ const k=Math.max(0,1-t*6); sy=0.68; sx=1.10; ox=12*k; }
+    else if(ph==='open'){ sy=1-0.05*Math.abs(Math.sin(t*4)); rot=Math.sin(t*3)*0.03; }         // exposed, breathing
+    else if(ph==='out'){ rot=0.08+Math.sin(rb.bob*12)*0.05; }
+    const baseH=BIP_S, dh=baseH*sy, dw=(baseH*BOSSBH_AR)*sx;
+    const cx=rb.x+(lowPose?BIPL_W:BIPI_W)/2+ox, cy=GROUND_Y+Math.sin(rb.bob*2.2)*1.5;
+    const glow = ph.indexOf('charge')===0 ? Math.min(1,t/0.8)
+               : ph.indexOf('fire')===0   ? 1
+               : ph==='open'              ? 0.12 : 0.35;
+    // ominous aura so the black silhouette reads against the night sky
+    ctx.save(); ctx.globalAlpha=0.10+0.16*glow; ctx.fillStyle=CORE;
+    ctx.beginPath(); ctx.ellipse(cx, cy-dh*0.5, dw*0.72, dh*0.62, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+    // body silhouette (mirrored to face the runner)
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot); ctx.scale(-1,1);
+    if(bossBhImg.complete&&bossBhImg.naturalWidth>0){ ctx.imageSmoothingEnabled=false; ctx.drawImage(bossBhImg,-dw/2,-dh,dw,dh); }
+    else { ctx.fillStyle='#141414'; ctx.fillRect(-dw/2,-dh,dw,dh); }
+    ctx.restore();
+    // charging eye at the beam origin (high or low)
+    const ey=lowPose?lowY:eyeY, ex=rb.x+14;
+    ctx.save();
+    ctx.globalAlpha=0.35+0.45*glow; ctx.fillStyle=HALO;
+    ctx.beginPath(); ctx.arc(ex, ey, 9+11*glow, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha=Math.min(1,0.5+0.5*glow); ctx.fillStyle=CORE; ctx.fillRect(ex-11, ey-4, 13, 8);
+    if(glow>0.6){ ctx.globalAlpha=1; ctx.fillStyle='#eafff0'; ctx.fillRect(ex-8, ey-2, 6, 4); }
+    ctx.globalAlpha=1; ctx.restore();
   }
   function drawCoins(){
     const cw=COIN_W, ch=cw/BTC_AR;
@@ -1278,6 +1321,7 @@
         phase:(roofBoss&&('roof:'+roofBoss.phase))||(boss&&('boss:'+boss.phase))||(drone&&('drone:'+drone.phase))||null}),
       play:(n)=>{ demo=true; startLevel=Math.max(1,Math.min(11,n|0)); maxLevel=Math.max(maxLevel,startLevel); start(); },
       setDemo:(b)=>{ demo=!!b; },
+      spawnHammer:()=>{ if(state==='run'){ speed=Math.max(speed,340); hammer={x:W+50,y:GROUND_Y-HAM_Y_OFF,bob:0}; } },
       scene:()=>({ level,lvlDist:Math.round(lvlDist),speed:Math.round(speed),zone,
         p:{x:Math.round(player.x),y:Math.round(player.y),onGround:player.onGround,ducking,vy:Math.round(player.vy)},
         obs:obstacles.filter(o=>o.x>player.x-60&&o.x<player.x+260).map(o=>({t:o.type,x:Math.round(o.x-player.x),w:Math.round(o.w||0),h:Math.round(o.h||0),bottom:o.bottom?Math.round(o.bottom):undefined})),
