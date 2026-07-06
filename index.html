@@ -202,7 +202,7 @@
   let lbFallback=[{n:'MIO',s:1450},{n:'SATOSHI',s:1120},{n:'ORDINAL',s:880},{n:'BLOCK',s:610},{n:'DEGEN',s:420}];
   function esc(t){return String(t).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
   let player,obstacles,particles,spawnX,bgScroll,shakeT,flashT,coinsArr,coinTimer,lastAction;
-  let coyote,buffer,jumpHeld,ducking,deadCooldown=0,drone=null,droneTimer,landT=0,fireT=0,fireCd=0,hammer=null,hammerTimer,zapT=0,charges=0,swingT=0,swingTarget=null,swingHit=false,demo=false,botHold=0,botShortHop=false,boss=null,bossTimer=24,shieldPick=null,shieldTimer=16,hasShield=false,shieldFlashT=0,gaps=[],zone='street',zoneT=2200,gapX=0,zoneBannerT=0,stars=[],ropeBalls=[],lanterns=[],lanternTimer=2,roofBoss=null,pendingRoofBoss=false,roofVisits=0,level=1,startLevel=1,maxLevel=1,lvlDist=0,lvlBannerT=0,bossDone=false,zoneBlend=0,clearedT=0,plats=[],hearts=[],heartsGot=0,starsThrown=0,platX=0,roofRuns=0,l1Idx=0,blueBlend=0,fallers=[],fallX=1400,heartLvlDone=false;
+  let coyote,buffer,jumpHeld,ducking,deadCooldown=0,drone=null,droneTimer,landT=0,fireT=0,fireCd=0,hammer=null,hammerTimer,zapT=0,charges=0,swingT=0,swingTarget=null,swingHit=false,demo=false,botHold=0,botShortHop=false,boss=null,bossTimer=24,shieldPick=null,shieldTimer=16,hasShield=false,shieldFlashT=0,gaps=[],zone='street',zoneT=2200,gapX=0,zoneBannerT=0,stars=[],ropeBalls=[],lanterns=[],lanternTimer=2,roofBoss=null,pendingRoofBoss=false,roofVisits=0,level=1,startLevel=1,maxLevel=1,lvlDist=0,lvlBannerT=0,bossDone=false,zoneBlend=0,clearedT=0,plats=[],hearts=[],heartsGot=0,starsThrown=0,platX=0,roofRuns=0,l1Idx=0,blueBlend=0,fallers=[],fallX=1400,heartLvlDone=false,waterDone=false;
   let bonus=0,blockHeight,blockFill,chain,surge,txArr,txTimer,confirmMsgT,txPops;
 
   function reset(){
@@ -214,7 +214,7 @@
     level=startLevel; maxLevel=Math.max(maxLevel,level); lvlDist=0; bossDone=false; lvlBannerT=2.6; starsThrown=0; heartsGot=0;
     zone=(level>=7&&level<=9)?'roof':'street'; zoneBlend=(zone==='roof')?1:0; gapX=W+340;
     if(level===7||level===8||level===9)pendingRoofBoss=true;
-    speed=LVL_SPD[Math.min(level,11)]; heartLvlDone=false;
+    speed=LVL_SPD[Math.min(level,11)]; heartLvlDone=false; waterDone=false;
     plats=[]; hearts=[]; platX=W+600; l1Idx=0; fallers=[]; fallX=1400;
     if(zone==='roof')roofRuns++; fireT=0; fireCd=0; hammer=null; hammerTimer=14; zapT=0; charges=0; swingT=0; swingTarget=null; swingHit=false;
     coinsArr=[]; coinTimer=2.0; coins=0;
@@ -416,7 +416,7 @@
     else { zone='street'; }
     if(level===7||level===8||level===9){ pendingRoofBoss=true; bossDone=false; }
     if(level===11){ zoneT=2000; }
-    heartLvlDone=false;
+    heartLvlDone=false; waterDone=false;
     if(typeof refreshLvlSel==='function') refreshLvlSel();
   }
   function die(cause){
@@ -553,7 +553,7 @@
         for(let i=0;i<14;i++)particles.push({x:ht.x,y:ht.y,vx:(Math.random()-0.5)*300,vy:(Math.random()-0.8)*300,life:0.4+Math.random()*0.3,c:Math.random()<0.5?'#e03a3a':'#f0889a',s:3+Math.random()*3}); } }
     hearts=hearts.filter(ht=>!ht.got&&ht.x>-40);
     // ---------- FALLING BLOCKS ----------
-    const fallOK = (level===3&&lvlDist>1500)||level===4||level===6||level===8||level>=10;
+    const fallOK = ((level===3&&lvlDist>1500)||level===4||level===6||level===8||level>=10) && !gaps.some(g=>g.water);
     if(fallOK && !roofBoss && !surge){ fallX-=speed*dt;
       if(fallX<=0){ const fx=player.x+300+Math.random()*240;
         const clear = !obstacles.some(o=>Math.abs(o.x-fx)<150) && !gaps.some(g=>fx>g.x-60&&fx<g.x+g.w+60);
@@ -569,6 +569,15 @@
         const pT=player.y-curH();
         if(player.x+P_W-8>fb.x && player.x+8<fb.x+34 && player.y>fb.y+4 && pT<fb.y+34){ die(); return; } } }
     fallers=fallers.filter(fb=>!fb.dead&&fb.x>-60);
+    // ---------- WATER CROSSING (one-time set-piece, level 6) ----------
+    if(level===6 && zone==='street' && !waterDone && !surge && !boss && lvlDist>LVL_LEN[6]*0.07){
+      waterDone=true;
+      obstacles=obstacles.filter(o=>o.x<player.x+40);           // clean run-up to the river
+      fallers=fallers.filter(f=>f.x<player.x+40); drone=null;
+      const bx=W+320, GW=380;                                   // gap far wider than a normal jump (~110 comfy hop)
+      gaps.push({x:bx,w:GW,water:true});                        // lethal water span
+      plats.push({x:bx+95,top:GROUND_Y-24,w:190,stone:true});   // one wide stepping stone (hops 95 / 95)
+    }
     // ---------- STREET HEART ----------
     if(level>=2 && zone==='street' && !heartLvlDone && lvlDist>LVL_LEN[Math.min(level,10)]*0.55){
       heartLvlDone=true; hearts.push({x:W+80,y:GROUND_Y-232,bob:0,got:false}); }
@@ -632,7 +641,7 @@
     let platTop=null, onPlat=false;
     for(const p of plats){ if(player.x+P_W>p.x && player.x<p.x+p.w){
         if(!player.onGround && player.vy>=0 && prevBottom<=p.top+8 && player.y>=p.top){ if(platTop===null||p.top<platTop)platTop=p.top; }
-        if(player.onGround && Math.abs(player.y-p.top)<6) onPlat=true; } }
+        if(player.onGround && Math.abs(player.y-p.top)<6){ onPlat=true; if(platTop===null||p.top<platTop)platTop=p.top; } } }   // keep glued to the platform top (no gravity sink) so footing over water is solid
     if(player.onGround && !onPlat && (overGapNow || player.y<GROUND_Y-4)) player.onGround=false;
     if(platTop!==null){ player.y=platTop; player.vy=0; player.onGround=true; landT=0.10; }
     if(player.y>=GROUND_Y && !overGapNow){
@@ -648,8 +657,9 @@
     const droneActive=drone&&(drone.phase==='charge'||drone.phase==='fire');
     droneTimer-=dt;
     const droneOK = level>=11 ? speed>360 : ((level===2&&lvlDist>2200)||level===4||level===6||((level===7||level===8)&&lvlDist>1200));
-    if(!drone&&!boss&&!roofBoss&&droneOK&&droneTimer<=0&&!surge)spawnDrone();
-    if(!droneActive&&!boss&&zone!=='roof'&&spawnX<W+160&&!surge)spawnGround();
+    const waterOn=gaps.some(g=>g.water);
+    if(!drone&&!boss&&!roofBoss&&droneOK&&droneTimer<=0&&!surge&&!waterOn)spawnDrone();
+    if(!droneActive&&!boss&&zone!=='roof'&&spawnX<W+160&&!surge&&!waterOn)spawnGround();
 
     const ph=curH(),px=player.x,py=player.y-ph,pw=P_W,pad=7;
     for(const o of obstacles){
@@ -821,7 +831,26 @@
     ctx.fillStyle='#241f1a'; ctx.fillRect(0,GROUND_Y,W,4);
     ctx.fillStyle='#1c1814'; const tick=42,off=(bgScroll%tick);
     for(let x=-off;x<W;x+=tick)ctx.fillRect(x,GROUND_Y+16,22,5);
-    for(const g of gaps){ ctx.fillStyle='#05070b'; ctx.fillRect(g.x,GROUND_Y,g.w,H-GROUND_Y);
+    for(const g of gaps){
+      if(g.water){                                     // ---- water crossing: blocky animated river ----
+        ctx.save();
+        ctx.beginPath(); ctx.rect(g.x,GROUND_Y,g.w,H-GROUND_Y); ctx.clip();
+        ctx.fillStyle='#0e3a5a'; ctx.fillRect(g.x,GROUND_Y,g.w,H-GROUND_Y);          // deep water
+        ctx.fillStyle='#155a86'; ctx.fillRect(g.x,GROUND_Y,g.w,22);                  // brighter surface band
+        ctx.fillStyle='#3a97c9';                                                     // wave crests (row 1)
+        const o1=(bgScroll*0.7)%28;
+        for(let wx=g.x-o1-28; wx<g.x+g.w+28; wx+=28) ctx.fillRect(wx,GROUND_Y+3,14,5);
+        ctx.fillStyle='#1f6c9c';                                                     // ripples (row 2)
+        const o2=(bgScroll*0.45)%36;
+        for(let wx=g.x-o2-36; wx<g.x+g.w+36; wx+=36) ctx.fillRect(wx+10,GROUND_Y+30,12,4);
+        ctx.globalAlpha=0.5; ctx.fillStyle='#2b83b4';                                // deeper glints
+        for(let wx=g.x-o1-40; wx<g.x+g.w+40; wx+=40) ctx.fillRect(wx+6,GROUND_Y+54,16,3);
+        ctx.globalAlpha=1;
+        ctx.restore();
+        ctx.fillStyle='#241f1a'; ctx.fillRect(g.x-3,GROUND_Y,3,H-GROUND_Y); ctx.fillRect(g.x+g.w,GROUND_Y,3,H-GROUND_Y);
+        continue;
+      }
+      ctx.fillStyle='#05070b'; ctx.fillRect(g.x,GROUND_Y,g.w,H-GROUND_Y);
       ctx.fillStyle='#241f1a'; ctx.fillRect(g.x-3,GROUND_Y,3,H-GROUND_Y); ctx.fillRect(g.x+g.w,GROUND_Y,3,H-GROUND_Y);
       ctx.globalAlpha=0.35; ctx.fillStyle='#caa15f';
       ctx.fillRect(g.x+7,GROUND_Y+42,4,4); ctx.fillRect(g.x+g.w-11,GROUND_Y+74,4,4); ctx.globalAlpha=1; }
@@ -1018,6 +1047,17 @@
       else { ctx.fillStyle='#2e2e38'; ctx.fillRect(fb.x,fb.y,34,34);
         ctx.fillStyle='#4a4a58'; ctx.fillRect(fb.x,fb.y,34,6); } }
     for(const p of plats){
+      if(p.stone){                                     // stepping stone planted in the water
+        const bot=GROUND_Y+14;
+        ctx.fillStyle='#57544b'; ctx.fillRect(p.x,p.top+7,p.w,bot-(p.top+7));        // stone body (into water)
+        ctx.fillStyle='#7d7869'; ctx.fillRect(p.x,p.top,p.w,7);                      // lit top cap
+        ctx.fillStyle='#403d37'; ctx.fillRect(p.x,GROUND_Y+2,p.w,12);                // submerged/shadowed base
+        ctx.fillStyle='#6a665a';                                                     // block seams
+        ctx.fillRect(p.x+Math.round(p.w*0.34),p.top+7,3,GROUND_Y-(p.top+7));
+        ctx.fillRect(p.x+Math.round(p.w*0.67),p.top+7,3,GROUND_Y-(p.top+7));
+        ctx.globalAlpha=0.55; ctx.fillStyle='#bfe0ee'; ctx.fillRect(p.x,p.top-2,p.w,2); ctx.globalAlpha=1;  // foam highlight
+        continue;
+      }
       ctx.fillStyle='#f7a000'; ctx.fillRect(p.x,p.top,p.w,14);
       ctx.fillStyle='#b06f00'; ctx.fillRect(p.x,p.top+14,p.w,22);
       ctx.fillStyle='#e0a33c'; ctx.globalAlpha=0.8;
@@ -1286,7 +1326,7 @@
     for(const fb of fallers){ if(fb.state==='warn') continue; if(fb.x+34<px-6) continue;
       const d=fb.x-front; if(d<ngd){ ngd=d; ngObs={type:'fall',w:34}; } }
     // roof gaps -> must jump across
-    let ngap=1e9; for(const g of gaps){ if(g.x+g.w<px-6) continue; const d=g.x-front; if(d<ngap) ngap=d; }
+    let ngap=1e9; for(const g of gaps){ if(g.water) continue; if(g.x+g.w<px-6) continue; const d=g.x-front; if(d<ngap) ngap=d; }
 
     // ---- duck threats (only work while grounded) ----
     // beam only exists during 'fire'; pre-position in late 'charge'. Don't duck during the drone's slow approach.
@@ -1318,8 +1358,24 @@
       if(!needJump && hammer){ const d=hammer.x-front; if(d>-30 && d<speed*0.40 && !tightAfter){ needJump=true; jumpHold=0.40; } }
     }
 
+    // ---- WATER CROSSING: hop bank -> stepping stone(s) -> far bank across the wide gap ----
+    if(!needDuck && gnd){
+      const wg=gaps.find(g=>g.water);
+      if(wg && px < wg.x+wg.w){                        // not yet fully across
+        const c=px+pw*0.5;                             // player centre drives the fall-through test
+        const stones=plats.filter(p=>p.stone).sort((a,b)=>a.x-b.x);
+        let curRight=null;                             // trailing edge of the surface we stand on
+        for(const s of stones){ if(c>s.x-2 && c<s.x+s.w+2 && Math.abs(player.y-s.top)<8){ curRight=s.x+s.w; break; } }
+        if(curRight===null && c<wg.x && player.y>=GROUND_Y-2) curRight=wg.x;   // on the near bank
+        if(curRight!==null && c<curRight){             // leap while the centre is still on the surface
+          const d=curRight-front;
+          if(d<speed*0.22){ needJump=true; jumpHold=0.5; }
+        }
+      }
+    }
+
     // ---- opportunistic coin / tx grab (lowest priority; never when a threat is within a jump) ----
-    const clearAhead = ngd>speed*0.95 && ngap>speed*0.95 && airETA>BOT_AIRTIME*1.1;
+    const clearAhead = ngd>speed*0.95 && ngap>speed*0.95 && airETA>BOT_AIRTIME*1.1 && !gaps.some(g=>g.water);
     if(!needJump && !needDuck && gnd && clearAhead){
       const grab=(arr)=>{ for(const c of arr){ if(c.got)continue; const d=c.x-(px+pw/2), high=GROUND_Y-c.y;
         if(high>85 && d>speed*0.12 && d<speed*0.33){ needJump=true; jumpHold=Math.min(0.42,0.18+high/800); return true; } } return false; };
@@ -1412,7 +1468,8 @@
       scene:()=>({ level,lvlDist:Math.round(lvlDist),speed:Math.round(speed),zone,
         p:{x:Math.round(player.x),y:Math.round(player.y),onGround:player.onGround,ducking,vy:Math.round(player.vy)},
         obs:obstacles.filter(o=>o.x>player.x-60&&o.x<player.x+260).map(o=>({t:o.type,x:Math.round(o.x-player.x),w:Math.round(o.w||0),h:Math.round(o.h||0),bottom:o.bottom?Math.round(o.bottom):undefined})),
-        gaps:gaps.filter(g=>g.x>player.x-60&&g.x<player.x+320).map(g=>({x:Math.round(g.x-player.x),w:Math.round(g.w)})),
+        gaps:gaps.filter(g=>g.x+g.w>player.x-60&&g.x<player.x+520).map(g=>({x:Math.round(g.x-player.x),w:Math.round(g.w),water:!!g.water})),
+        plats:plats.filter(p=>p.x+p.w>player.x-60&&p.x<player.x+520).map(p=>({x:Math.round(p.x-player.x),w:Math.round(p.w),top:Math.round(p.top),stone:!!p.stone})),
         fallers:fallers.filter(f=>f.x>player.x-60&&f.x<player.x+320).map(f=>({x:Math.round(f.x-player.x),y:Math.round(f.y),st:f.state})),
         drone:drone?{phase:drone.phase,t:+drone.t.toFixed(2)}:null })
     };
