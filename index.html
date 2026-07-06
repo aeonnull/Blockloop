@@ -999,7 +999,7 @@
     if(roofBoss){ const rb=roofBoss;
       const lowPose = (rb.phase==='chargeL'||rb.phase==='fireL');
       const eyeY=GROUND_Y-BIP_S+BIP_EYE, lowY=GROUND_Y-BIP_LOW;
-      const CORE='#2ee830', HALO='#bdf5b3';
+      const CORE='#ff2a2a', HALO='#ffc9c9';
       function beam(y,x1,x2){ ctx.fillStyle=HALO; ctx.fillRect(x1,y-5,x2-x1,10);
         ctx.fillStyle=CORE; ctx.fillRect(x1,y-2,x2-x1,4); }
       const bx=rb.x, faceX=bx+14;
@@ -1059,6 +1059,22 @@
     else { ctx.fillStyle='#c9d6dc'; ctx.fillRect(-hw/2,-hh/2,hw,hh*0.5); }
     ctx.restore();
   }
+  // Chunky pixel-font "BIP" / "110" label, pre-rendered once to a tiny offscreen
+  // canvas (nearest-neighbour upscaled at draw time) so it reads as blocky retro
+  // text with no external font file.
+  let bipTextCanvas=null;
+  function getBipTextCanvas(){
+    if(bipTextCanvas) return bipTextCanvas;
+    const c=document.createElement('canvas'); c.width=28; c.height=18;
+    const g=c.getContext('2d');
+    g.imageSmoothingEnabled=false; g.textAlign='center'; g.textBaseline='middle';
+    g.font='bold 8px monospace';
+    // 1px dark "shadow" offset first (reads as a pixel outline once upscaled), then bright fill
+    g.fillStyle='#1a0000'; g.fillText('BIP',15,6); g.fillText('110',15,14);
+    g.fillStyle='#fff2c2'; g.fillText('BIP',14,5); g.fillText('110',14,13);
+    bipTextCanvas=c;
+    return c;
+  }
   // BIP-110: the same Blockhead as the player, recoloured, mirrored, and ALIVE.
   // Same squash/stretch vocabulary as drawGenericChar, driven by the boss phase.
   function drawBipBoss(rb, lowPose, eyeY, lowY, CORE, HALO){
@@ -1079,9 +1095,21 @@
       ctx.beginPath(); ctx.arc(cx, cy-dh*0.5, dw*0.55, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
     // body (mirrored to face the runner), squashing/stretching just like the player
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot); ctx.scale(-1,1);
-    if(bossBhImg.complete&&bossBhImg.naturalWidth>0){ ctx.imageSmoothingEnabled=false; ctx.drawImage(bossBhImg,-dw/2,-dh,dw,dh); }
-    else { ctx.fillStyle='#1f6b3a'; ctx.fillRect(-dw/2,-dh,dw,dh); }
+    if(bossBhImg.complete&&bossBhImg.naturalWidth>0){
+      ctx.imageSmoothingEnabled=false;
+      ctx.filter='grayscale(1) brightness(0.35) sepia(1) saturate(6) hue-rotate(-50deg) contrast(1.15)';
+      ctx.drawImage(bossBhImg,-dw/2,-dh,dw,dh);
+      ctx.filter='none';
+    }
+    else { ctx.fillStyle='#3a0d0d'; ctx.fillRect(-dw/2,-dh,dw,dh); }
     ctx.restore();
+    // "BIP" / "110" pixel-font label on the torso — drawn WITHOUT the scale(-1,1)
+    // above so it reads left-to-right instead of mirrored.
+    { ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot);
+      ctx.imageSmoothingEnabled=false;
+      const tc=getBipTextCanvas(), tw=dw*0.6, th=tw*(tc.height/tc.width);
+      ctx.drawImage(tc, -tw/2, -dh*0.66, tw, th);
+      ctx.restore(); }
     // focused beam-charge energy at the muzzle (high or low) — clearly the beam, not an eye
     const ey=lowPose?lowY:eyeY, ex=rb.x+14;
     if(glow>0.05){ ctx.save();
